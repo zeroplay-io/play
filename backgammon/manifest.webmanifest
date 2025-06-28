@@ -1,0 +1,15 @@
+{
+    "name": "Backgammon GO: Fair Dice",
+    "short_name": "Backgammon GO: Fair Dice",
+    "start_url": "index.html",
+    "display": "fullscreen",
+    "background_color": "#FFFFFF",
+    "theme_color": "#000",
+    "description": "Roll honest dice, beat real opponents! Backgammon Go uses verifiable RNG, live multiplayer, friend duels, tournaments & a fun pet to raise—fair play in every match.",
+    "icons": [{
+      "src": "TemplateData/icons/unity-logo-dark.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }]
+  }
