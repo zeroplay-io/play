@@ -419,7 +419,6 @@
           container.style.height = "100%";
           canvas.width = wrapperWidth;
           canvas.height = wrapperHeight;
-          notifyUnityResize();
           return;
         }
 
@@ -432,7 +431,6 @@
           container.style.height = "100%";
           canvas.width = wrapperWidth;
           canvas.height = wrapperHeight;
-          notifyUnityResize();
           return;
         }
 
@@ -454,42 +452,6 @@
         container.style.height = containerHeight + "px";
         canvas.width = containerWidth;
         canvas.height = containerHeight;
-
-        notifyUnityResize();
-      }
-
-      function notifyUnityResize() {
-        // Try multiple methods to notify Unity about canvas resize
-        if (window.unityInstance) {
-          // Method 1: Direct canvas update
-          if (
-            window.unityInstance.Module &&
-            window.unityInstance.Module.setCanvasSize
-          ) {
-            window.unityInstance.Module.setCanvasSize(
-              canvas.width,
-              canvas.height
-            );
-          }
-
-          // Method 2: Trigger browser resize event
-          setTimeout(() => {
-            window.dispatchEvent(new Event("resize"));
-
-            // Method 3: Force Unity to recalculate
-            if (window.unityInstance.SendMessage) {
-              try {
-                // This is a common Unity method to force UI refresh
-                window.unityInstance.SendMessage(
-                  "Canvas",
-                  "ForceUpdateCanvases"
-                );
-              } catch (e) {
-                // Ignore if the GameObject doesn't exist
-              }
-            }
-          }, 100);
-        }
       }
 
       function updateOrientation() {
@@ -504,45 +466,9 @@
         }
       }
 
-      // Fullscreen handling
-      function enterFullscreen() {
-        if (container.requestFullscreen) {
-          container.requestFullscreen();
-        } else if (container.webkitRequestFullscreen) {
-          container.webkitRequestFullscreen();
-        } else if (container.msRequestFullscreen) {
-          container.msRequestFullscreen();
-        }
-        document.body.classList.add("fullscreen");
-        resizeCanvas();
-      }
-
-      function exitFullscreen() {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        }
-      }
-
       // Event listeners
       window.addEventListener("resize", updateOrientation);
       window.addEventListener("orientationchange", updateOrientation);
-
-      fullscreenBtn.addEventListener("click", enterFullscreen);
-
-      document.addEventListener("fullscreenchange", () => {
-        if (!document.fullscreenElement) {
-          document.body.classList.remove("fullscreen");
-          resizeCanvas();
-          // Force Unity to update canvas size after exiting fullscreen
-          if (window.unityInstance && window.unityInstance.SetFullscreen) {
-            window.unityInstance.SetFullscreen(0);
-          }
-        }
-      });
 
       // Initialize
       updateOrientation();
@@ -597,12 +523,12 @@
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/81cde6431fad66d80496f4eadbde93f9.data.br",
+          dataUrl: "Build/543fe9b7b3b6d4151e9bccea2c6a0924.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/0cf826704eba4df2f47babd545506326.wasm.br",
+          codeUrl: "Build/eececf10b716974b29ece116fa5e6f7f.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "4.7",
+          productVersion: "4.9",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
@@ -611,6 +537,9 @@
           unityInstance = instance;
           window.unityInstance = instance; // Make it globally accessible
           overlay.style.display = "none";
+          fullscreenBtn.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
         })
         .catch((err) => {
           console.error(err);
