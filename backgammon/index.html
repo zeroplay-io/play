@@ -1,602 +1,677 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-	<meta charset="utf-8" />
-	<meta name="viewport"
-		content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-	<meta http-equiv="Pragma" content="no-cache" />
-	<meta http-equiv="Expires" content="0" />
-	<title>Backgammon</title>
-	<style>
-		:root {
-			--clr-bg: #0e0e11;
-			--clr-card: rgba(255, 255, 255, 0.05);
-			--clr-track: rgba(255, 255, 255, 0.15);
-			--clr-fill-start: #23d5ab;
-			--clr-fill-end: #3b82f6;
-			--radius-lg: 18px;
-			--radius-sm: 10px;
-			--shadow-elev: 0 10px 28px rgba(0, 0, 0, 0.55);
-			--font-base: "Inter", Arial, sans-serif;
-			--safe-area-inset-top: env(safe-area-inset-top, 0px);
-			--safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
-			--safe-area-inset-left: env(safe-area-inset-left, 0px);
-			--safe-area-inset-right: env(safe-area-inset-right, 0px);
-		}
-
-		* {
-			box-sizing: border-box;
-		}
-
-		html,
-		body {
-			margin: 0;
-			width: 100%;
-			height: 100%;
-			overflow: hidden;
-			background: var(--clr-bg);
-			color: #fff;
-			font-family: var(--font-base);
-		}
-
-		#game-wrapper {
-			width: 100%;
-			height: 100%;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			padding: var(--safe-area-inset-top) var(--safe-area-inset-right) var(--safe-area-inset-bottom) var(--safe-area-inset-left);
-		}
-
-		#unity-container {
-			position: relative;
-			background: #000;
-			box-shadow: 0 0 40px rgba(0, 0, 0, 0.8),
-				0 0 80px rgba(35, 213, 171, 0.2),
-				inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-			border-radius: 12px;
-			overflow: hidden;
-			transition: all 0.3s ease;
-		}
-
-		/* Device frame effect on desktop */
-		@media (min-width: 1024px) and (pointer: fine) {
-			body:not(.fullscreen) #unity-container {
-				border: 3px solid #1a1a1d;
-				box-shadow: 0 0 40px rgba(0, 0, 0, 0.8),
-					0 0 80px rgba(35, 213, 171, 0.2),
-					inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-					inset 0 2px 4px rgba(255, 255, 255, 0.05);
-			}
-
-			body:not(.fullscreen) #unity-container::before {
-				content: "";
-				position: absolute;
-				top: -3px;
-				left: -3px;
-				right: -3px;
-				bottom: -3px;
-				background: linear-gradient(135deg, #2a2a2d, #0a0a0d);
-				border-radius: 15px;
-				z-index: -1;
-			}
-
-			body:not(.fullscreen) #unity-container:hover {
-				box-shadow: 0 0 50px rgba(0, 0, 0, 0.9),
-					0 0 100px rgba(35, 213, 171, 0.3),
-					inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-					inset 0 2px 4px rgba(255, 255, 255, 0.08);
-			}
-		}
-
-		#unity-canvas {
-			display: block;
-			width: 100%;
-			height: 100%;
-			border-radius: 9px;
-		}
-
-		/* Fullscreen button */
-		#fullscreen-button {
-			position: absolute;
-			bottom: 10px;
-			right: 10px;
-			width: 40px;
-			height: 40px;
-			background: rgba(0, 0, 0, 0.7);
-			border: 2px solid rgba(255, 255, 255, 0.3);
-			border-radius: 8px;
-			cursor: pointer;
-			display: none;
-			align-items: center;
-			justify-content: center;
-			transition: all 0.2s;
-			z-index: 100;
-		}
-
-		#fullscreen-button:hover {
-			background: rgba(0, 0, 0, 0.85);
-			border-color: rgba(255, 255, 255, 0.5);
-			transform: scale(1.05);
-		}
-
-		#fullscreen-button svg {
-			width: 20px;
-			height: 20px;
-			fill: #fff;
-		}
-
-		/* Show fullscreen button only on desktop */
-		@media (min-width: 1024px) and (pointer: fine) {
-			#fullscreen-button {
-				display: flex;
-			}
-		}
-
-		/* Mobile styles - full screen */
-		@media (max-width: 767px) {
-			#game-wrapper {
-				padding: 0;
-			}
-
-			#unity-container {
-				width: 100% !important;
-				height: 100% !important;
-				border-radius: 0 !important;
-				border: none !important;
-				box-shadow: none !important;
-			}
-
-			#unity-container::before {
-				display: none !important;
-			}
-
-			#unity-canvas {
-				border-radius: 0 !important;
-			}
-		}
-
-		/* Tablet styles - full screen with safe areas */
-		@media (min-width: 768px) and (max-width: 1023px) {
-			#unity-container {
-				width: 100% !important;
-				height: 100% !important;
-				border-radius: 0 !important;
-				border: none !important;
-				box-shadow: none !important;
-			}
-
-			#unity-container::before {
-				display: none !important;
-			}
-
-			#unity-canvas {
-				border-radius: 0 !important;
-			}
-		}
-
-		/* Loader overlay */
-		#loader-overlay {
-			position: absolute;
-			inset: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: rgba(14, 14, 17, 0.95);
-			z-index: 10;
-		}
-
-		#loader-card {
-			background: var(--clr-card);
-			backdrop-filter: blur(10px);
-			box-shadow: var(--shadow-elev);
-			border-radius: var(--radius-lg);
-			padding: 32px;
-			display: flex;
-			flex-direction: column;
-			gap: 16px;
-			text-align: center;
-			max-width: 90vw;
-			width: 360px;
-			align-items: center;
-		}
-
-		#loader-logo {
-			width: 120px;
-			height: auto;
-			object-fit: contain;
-			margin-bottom: 16px;
-		}
-
-		#progress-track {
-			position: relative;
-			width: 100%;
-			height: 20px;
-			background: var(--clr-track);
-			border-radius: var(--radius-sm);
-			overflow: hidden;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-
-		#progress-fill {
-			position: absolute;
-			left: 0;
-			top: 0;
-			width: 0%;
-			height: 100%;
-			background: linear-gradient(90deg,
-					var(--clr-fill-start),
-					var(--clr-fill-end));
-			transition: width 0.1s;
-		}
-
-		#progress-track .progress-label {
-			position: relative;
-			z-index: 1;
-			font-size: 0.85rem;
-			color: #fff;
-			pointer-events: none;
-			text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-		}
-
-		#bytes {
-			font-size: 0.75rem;
-			opacity: 0.8;
-		}
-
-		/* Portrait warning */
-		#portrait-warning {
-			position: absolute;
-			inset: 0;
-			display: none;
-			align-items: center;
-			justify-content: center;
-			background: var(--clr-bg);
-			font-size: 4vw;
-			text-align: center;
-			padding: 2em;
-			z-index: 20;
-		}
-
-		#portrait-warning.active {
-			display: flex;
-		}
-
-		/* Fullscreen mode */
-		body.fullscreen #game-wrapper {
-			padding: 0;
-		}
-
-		body.fullscreen #unity-container {
-			width: 100% !important;
-			height: 100% !important;
-			box-shadow: none;
-			border-radius: 0;
-			border: none;
-		}
-
-		body.fullscreen #unity-container::before {
-			display: none;
-		}
-
-		body.fullscreen #unity-canvas {
-			border-radius: 0;
-		}
-
-		body.fullscreen #fullscreen-button {
-			display: none;
-		}
-
-	</style>
-</head>
-
-<body>
-	<div id="game-wrapper">
-		<div id="unity-container">
-			<canvas id="unity-canvas" tabindex="1"></canvas>
-			<button id="fullscreen-button" title="Enter fullscreen">
-				<svg viewBox="0 0 24 24">
-					<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
-				</svg>
-			</button>
-			<div id="loader-overlay">
-				<div id="loader-card">
-					<img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
-					<div id="bytes">Loading...</div>
-					<div id="progress-track">
-						<div id="progress-fill"></div>
-						<div class="progress-label">0%</div>
-					</div>
-				</div>
-			</div>
-			<div id="portrait-warning">Please rotate your device to landscape</div>
-		</div>
-	</div>
-
-	<script src="loader.js"></script>
-	<script>
-		// Check URL parameters
-		const urlParams = new URLSearchParams(window.location.search);
-		const shouldStartFullscreen = urlParams.get("fullscreen") === "true";
-		const shouldClearCache = urlParams.get("clear") === "true";
-
-		// Clear all possible caches and storage if requested
-		async function clearAllCaches() {
-			console.log("Starting cache cleanup...");
-
-			// Clear Service Workers
-			if ("serviceWorker" in navigator) {
-				const registrations =
-					await navigator.serviceWorker.getRegistrations();
-				for (let registration of registrations) {
-					await registration.unregister();
-				}
-				console.log("Service Workers cleared");
-			}
-
-			// Clear Cache Storage
-			if ("caches" in window) {
-				const cacheNames = await caches.keys();
-				await Promise.all(
-					cacheNames.map((cacheName) => caches.delete(cacheName))
-				);
-				console.log("Cache Storage cleared");
-			}
-
-			// Clear IndexedDB
-			if (window.indexedDB && window.indexedDB.databases) {
-				try {
-					const databases = await indexedDB.databases();
-					databases.forEach((db) => {
-						indexedDB.deleteDatabase(db.name);
-					});
-					console.log("IndexedDB cleared");
-				} catch (e) {
-					console.log("IndexedDB clear failed:", e);
-				}
-			}
-
-			console.log("Cache cleanup complete");
-		}
-
-		// Run cleanup if requested via URL parameter
-		(async () => {
-			if (shouldClearCache) {
-				await clearAllCaches();
-				// Remove the clear parameter and reload
-				urlParams.delete("clear");
-				const newUrl =
-					window.location.pathname +
-					(urlParams.toString() ? "?" + urlParams.toString() : "");
-				window.location.replace(newUrl);
-			}
-		})();
-
-		const ASPECT = 9 / 6;
-		const container = document.getElementById("unity-container");
-		const canvas = document.getElementById("unity-canvas");
-		const overlay = document.getElementById("loader-overlay");
-		const fillEl = document.getElementById("progress-fill");
-		const percentEl = document.querySelector(
-			"#progress-track .progress-label"
-		);
-		const bytesEl = document.getElementById("bytes");
-		const warnEl = document.getElementById("portrait-warning");
-		const fullscreenBtn = document.getElementById("fullscreen-button");
-
-		// Show loading message if clearing cache
-		if (shouldClearCache) {
-			const bytesEl = document.getElementById("bytes");
-			bytesEl.textContent = "Clearing cache...";
-		}
-
-		function isMobile() {
-			return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-		}
-
-		function isTablet() {
-			const ua = navigator.userAgent;
-			return (
-				/iPad|Android(?!.*Mobile)/i.test(ua) ||
-				(window.innerWidth >= 768 && window.innerWidth <= 1023)
-			);
-		}
-
-		function resizeCanvas() {
-			const wrapper = document.getElementById("game-wrapper");
-			const wrapperWidth = wrapper.clientWidth;
-			const wrapperHeight = wrapper.clientHeight;
-
-			// Mobile and tablet - always full screen
-			if (isMobile() || isTablet()) {
-				container.style.width = "100%";
-				container.style.height = "100%";
-				// 不设置 canvas.width 和 canvas.height，让Unity自己管理分辨率
-				return;
-			}
-
-			// Desktop - check if fullscreen or URL parameter
-			if (
-				document.body.classList.contains("fullscreen") ||
-				shouldStartFullscreen
-			) {
-				container.style.width = "100%";
-				container.style.height = "100%";
-				// 不设置 canvas.width 和 canvas.height，让Unity自己管理分辨率
-				return;
-			}
-
-			// Desktop normal mode - maintain aspect ratio
-			const windowAspect = wrapperWidth / wrapperHeight;
-			let containerWidth, containerHeight;
-
-			if (windowAspect < ASPECT) {
-				// Window is narrower than game aspect - fit to width
-				containerWidth = Math.min(wrapperWidth * 0.95, 1200); // Max width 1200px
-				containerHeight = containerWidth / ASPECT;
-			} else {
-				// Window is wider than game aspect - fit to height
-				containerHeight = Math.min(wrapperHeight * 0.9, 800); // Max height 800px
-				containerWidth = containerHeight * ASPECT;
-			}
-
-			container.style.width = containerWidth + "px";
-			container.style.height = containerHeight + "px";
-			// 不设置 canvas.width 和 canvas.height，让Unity通过CSS自动缩放
-		}
-
-		function updateOrientation() {
-			if (
-				isMobile() &&
-				window.matchMedia("(orientation: portrait)").matches
-			) {
-				warnEl.classList.add("active");
-			} else {
-				warnEl.classList.remove("active");
-				resizeCanvas();
-			}
-		}
-
-		// Event listeners
-		window.addEventListener("resize", updateOrientation);
-		window.addEventListener("orientationchange", updateOrientation);
-
-		// Initialize
-		updateOrientation();
-
-		// Check if should start in fullscreen
-		if (shouldStartFullscreen && !isMobile() && !isTablet()) {
-			document.body.classList.add("fullscreen");
-		}
-
-		// Unity loader callback
-		function onProgress(fraction, loadedBytes, totalBytes) {
-			// Unity tends to overestimate total bytes, adjust for more accurate progress
-			const adjustedTotalBytes = totalBytes ? totalBytes * 0.75 : 0;
-
-			// Cap loaded bytes to adjusted total to avoid showing more than 100%
-			if (loadedBytes > adjustedTotalBytes) {
-				loadedBytes = adjustedTotalBytes;
-			}
-
-			// Calculate percentage based on actual bytes when available, otherwise use fraction
-			let pct;
-			if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
-				// Use actual bytes for more accurate percentage
-				pct = Math.round((loadedBytes / adjustedTotalBytes) * 100);
-			} else {
-				// Fall back to fraction-based calculation
-				const adjustedFraction = Math.min(fraction / 0.75, 1);
-				pct = Math.round(adjustedFraction * 100);
-			}
-			if (pct >= 100) {
-				pct = 99;
-			}
-
-			console.log(
-				`Loading progress: ${pct}% (${loadedBytes} / ${adjustedTotalBytes} bytes)`
-			);
-
-			fillEl.style.width = pct + "%";
-			percentEl.textContent = pct + "%";
-
-			if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
-				bytesEl.textContent =
-					(loadedBytes / 1048576).toFixed(1) +
-					" / " +
-					(adjustedTotalBytes / 1048576).toFixed(1) +
-					" MB";
-			} else {
-				bytesEl.textContent = "Loading...";
-			}
-		}
-
-		// 记录进入浏览器全屏前的状态
-		let wasBodyFullscreen = false;
-
-		// Start Unity
-		createUnityInstance(
-			canvas,
-			{
-				dataUrl: "Build/5ab770f8b1632c8036dd4bf2cc27a0f4.data.br",
-				frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-				codeUrl: "Build/90a91e5f03113b3f36fb64b63c17590c.wasm.br",
-				companyName: "ZeroPlay",
-				productName: "Backgammon",
-				productVersion: "5.1",
-				streamingAssetsUrl: "StreamingAssets",
-			},
-			onProgress
-		)
-			.then((unityInstance) => {
-				overlay.style.display = "none";
-
-				// 保存unity实例到全局变量
-				window.unityInstance = unityInstance;
-
-				// 全屏按钮点击处理
-				fullscreenBtn.onclick = () => {
-					// 记录当前body是否有fullscreen类
-					wasBodyFullscreen = document.body.classList.contains("fullscreen");
-					unityInstance.SetFullscreen(1);
-				};
-			})
-			.catch((err) => {
-				console.error(err);
-				alert("Failed to load Unity: " + err.message);
-			});
-
-		// 监听退出浏览器全屏
-		document.addEventListener("fullscreenchange", () => {
-			if (!document.fullscreenElement) {
-				// 恢复进入前的状态
-				if (wasBodyFullscreen) {
-					document.body.classList.add("fullscreen");
-				} else {
-					document.body.classList.remove("fullscreen");
-				}
-				resizeCanvas();
-			}
-		});
-
-		// 兼容其他浏览器
-		document.addEventListener("webkitfullscreenchange", () => {
-			if (!document.webkitFullscreenElement) {
-				if (wasBodyFullscreen) {
-					document.body.classList.add("fullscreen");
-				} else {
-					document.body.classList.remove("fullscreen");
-				}
-				resizeCanvas();
-			}
-		});
-
-		document.addEventListener("mozfullscreenchange", () => {
-			if (!document.mozFullScreenElement) {
-				if (wasBodyFullscreen) {
-					document.body.classList.add("fullscreen");
-				} else {
-					document.body.classList.remove("fullscreen");
-				}
-				resizeCanvas();
-			}
-		});
-
-		document.addEventListener("msfullscreenchange", () => {
-			if (!document.msFullscreenElement) {
-				if (wasBodyFullscreen) {
-					document.body.classList.add("fullscreen");
-				} else {
-					document.body.classList.remove("fullscreen");
-				}
-				resizeCanvas();
-			}
-		});
-	</script>
-</body>
-
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Backgammon</title>
+    <style>
+      :root {
+        --clr-bg: #0e0e11;
+        --clr-card: rgba(255, 255, 255, 0.05);
+        --clr-track: rgba(255, 255, 255, 0.15);
+        --clr-fill-start: #23d5ab;
+        --clr-fill-end: #3b82f6;
+        --radius-lg: 18px;
+        --radius-sm: 10px;
+        --shadow-elev: 0 10px 28px rgba(0, 0, 0, 0.55);
+        --font-base: "Inter", Arial, sans-serif;
+        --safe-area-inset-top: env(safe-area-inset-top, 0px);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-inset-left: env(safe-area-inset-left, 0px);
+        --safe-area-inset-right: env(safe-area-inset-right, 0px);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--clr-bg);
+        color: #fff;
+        font-family: var(--font-base);
+      }
+
+      #game-wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: var(--safe-area-inset-top) var(--safe-area-inset-right)
+          var(--safe-area-inset-bottom) var(--safe-area-inset-left);
+      }
+
+      #unity-container {
+        position: relative;
+        background: #000;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.8),
+          0 0 80px rgba(35, 213, 171, 0.2),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+
+      /* Device frame effect on desktop */
+      @media (min-width: 1024px) and (pointer: fine) {
+        body:not(.fullscreen) #unity-container {
+          border: 3px solid #1a1a1d;
+          box-shadow: 0 0 40px rgba(0, 0, 0, 0.8),
+            0 0 80px rgba(35, 213, 171, 0.2),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+            inset 0 2px 4px rgba(255, 255, 255, 0.05);
+        }
+
+        body:not(.fullscreen) #unity-container::before {
+          content: "";
+          position: absolute;
+          top: -3px;
+          left: -3px;
+          right: -3px;
+          bottom: -3px;
+          background: linear-gradient(135deg, #2a2a2d, #0a0a0d);
+          border-radius: 15px;
+          z-index: -1;
+        }
+
+        body:not(.fullscreen) #unity-container:hover {
+          box-shadow: 0 0 50px rgba(0, 0, 0, 0.9),
+            0 0 100px rgba(35, 213, 171, 0.3),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+            inset 0 2px 4px rgba(255, 255, 255, 0.08);
+        }
+      }
+
+      #unity-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 9px;
+      }
+
+      /* Status bar */
+      #status-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 48px;
+        background: linear-gradient(
+          135deg,
+          rgba(14, 14, 17, 0.95),
+          rgba(26, 26, 29, 0.95)
+        );
+        backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 100;
+        border-radius: 0 0 9px 9px;
+        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      #status-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      #status-logo {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(35, 213, 171, 0.3);
+      }
+
+      #status-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      #fullscreen-button {
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      #fullscreen-button::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(35, 213, 171, 0.1),
+          rgba(59, 130, 246, 0.1)
+        );
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      #fullscreen-button:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.25);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+          0 0 20px rgba(35, 213, 171, 0.2);
+      }
+
+      #fullscreen-button:hover::before {
+        opacity: 1;
+      }
+
+      #fullscreen-button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      #fullscreen-button svg {
+        width: 18px;
+        height: 18px;
+        fill: #fff;
+        position: relative;
+        z-index: 1;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+
+      /* Show status bar only on desktop when not fullscreen */
+      @media (min-width: 1024px) and (pointer: fine) {
+        body:not(.fullscreen) #status-bar {
+          display: flex;
+        }
+      }
+
+      /* Mobile styles - full screen */
+      @media (max-width: 767px) {
+        #game-wrapper {
+          padding: 0;
+        }
+        #unity-container {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        #unity-container::before {
+          display: none !important;
+        }
+        #unity-canvas {
+          border-radius: 0 !important;
+        }
+      }
+
+      /* Tablet styles - full screen with safe areas */
+      @media (min-width: 768px) and (max-width: 1023px) {
+        #unity-container {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        #unity-container::before {
+          display: none !important;
+        }
+        #unity-canvas {
+          border-radius: 0 !important;
+        }
+      }
+
+      /* Loader overlay */
+      #loader-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(14, 14, 17, 0.95);
+        z-index: 10;
+      }
+
+      #loader-card {
+        background: var(--clr-card);
+        backdrop-filter: blur(10px);
+        box-shadow: var(--shadow-elev);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+        max-width: 90vw;
+        width: 360px;
+        align-items: center;
+      }
+
+      #loader-logo {
+        width: 120px;
+        height: auto;
+        object-fit: contain;
+        margin-bottom: 16px;
+      }
+
+      #progress-track {
+        position: relative;
+        width: 100%;
+        height: 20px;
+        background: var(--clr-track);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #progress-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          var(--clr-fill-start),
+          var(--clr-fill-end)
+        );
+        transition: width 0.1s;
+      }
+
+      #progress-track .progress-label {
+        position: relative;
+        z-index: 1;
+        font-size: 0.85rem;
+        color: #fff;
+        pointer-events: none;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      }
+
+      #bytes {
+        font-size: 0.75rem;
+        opacity: 0.8;
+      }
+
+      /* Portrait warning */
+      #portrait-warning {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: var(--clr-bg);
+        font-size: 4vw;
+        text-align: center;
+        padding: 2em;
+        z-index: 20;
+      }
+
+      #portrait-warning.active {
+        display: flex;
+      }
+
+      /* Fullscreen mode */
+      body.fullscreen #game-wrapper {
+        padding: 0;
+      }
+
+      body.fullscreen #unity-container {
+        width: 100% !important;
+        height: 100% !important;
+        box-shadow: none;
+        border-radius: 0;
+        border: none;
+      }
+
+      body.fullscreen #unity-container::before {
+        display: none;
+      }
+
+      body.fullscreen #unity-canvas {
+        border-radius: 0;
+      }
+
+      body.fullscreen #status-bar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-wrapper">
+      <div id="unity-container">
+        <canvas id="unity-canvas" tabindex="1"></canvas>
+        <div id="status-bar">
+          <div id="status-left">
+            <img id="status-logo" src="TemplateData/logo.png" alt="logo" />
+            <div id="status-title">Backgammon</div>
+          </div>
+          <button id="fullscreen-button" title="Enter fullscreen">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
+              />
+            </svg>
+          </button>
+        </div>
+        <div id="loader-overlay">
+          <div id="loader-card">
+            <img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
+            <div id="bytes">Loading...</div>
+            <div id="progress-track">
+              <div id="progress-fill"></div>
+              <div class="progress-label">0%</div>
+            </div>
+          </div>
+        </div>
+        <div id="portrait-warning">Please rotate your device to landscape</div>
+      </div>
+    </div>
+
+    <script src="loader.js"></script>
+    <script>
+      // Check URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldStartFullscreen = urlParams.get("fullscreen") === "true";
+      const shouldClearCache = urlParams.get("clear") === "true";
+
+      // Clear all possible caches and storage if requested
+      async function clearAllCaches() {
+        console.log("Starting cache cleanup...");
+
+        // Clear Service Workers
+        if ("serviceWorker" in navigator) {
+          const registrations =
+            await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+          console.log("Service Workers cleared");
+        }
+
+        // Clear Cache Storage
+        if ("caches" in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames.map((cacheName) => caches.delete(cacheName))
+          );
+          console.log("Cache Storage cleared");
+        }
+
+        // Clear IndexedDB
+        if (window.indexedDB && window.indexedDB.databases) {
+          try {
+            const databases = await indexedDB.databases();
+            databases.forEach((db) => {
+              indexedDB.deleteDatabase(db.name);
+            });
+            console.log("IndexedDB cleared");
+          } catch (e) {
+            console.log("IndexedDB clear failed:", e);
+          }
+        }
+
+        console.log("Cache cleanup complete");
+      }
+
+      // Run cleanup if requested via URL parameter
+      (async () => {
+        if (shouldClearCache) {
+          await clearAllCaches();
+          // Remove the clear parameter and reload
+          urlParams.delete("clear");
+          const newUrl =
+            window.location.pathname +
+            (urlParams.toString() ? "?" + urlParams.toString() : "");
+          window.location.replace(newUrl);
+        }
+      })();
+
+      const ASPECT = 9 / 6;
+      const container = document.getElementById("unity-container");
+      const canvas = document.getElementById("unity-canvas");
+      const overlay = document.getElementById("loader-overlay");
+      const fillEl = document.getElementById("progress-fill");
+      const percentEl = document.querySelector(
+        "#progress-track .progress-label"
+      );
+      const bytesEl = document.getElementById("bytes");
+      const warnEl = document.getElementById("portrait-warning");
+      const fullscreenBtn = document.getElementById("fullscreen-button");
+
+      // Show loading message if clearing cache
+      if (shouldClearCache) {
+        const bytesEl = document.getElementById("bytes");
+        bytesEl.textContent = "Clearing cache...";
+      }
+
+      function isMobile() {
+        return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      }
+
+      function isTablet() {
+        const ua = navigator.userAgent;
+        return (
+          /iPad|Android(?!.*Mobile)/i.test(ua) ||
+          (window.innerWidth >= 768 && window.innerWidth <= 1023)
+        );
+      }
+
+      function resizeCanvas() {
+        const wrapper = document.getElementById("game-wrapper");
+        const wrapperWidth = wrapper.clientWidth;
+        const wrapperHeight = wrapper.clientHeight;
+
+        // Mobile and tablet - always full screen
+        if (isMobile() || isTablet()) {
+          container.style.width = "100%";
+          container.style.height = "100%";
+          // 不设置 canvas.width 和 canvas.height，让Unity自己管理分辨率
+          return;
+        }
+
+        // Desktop - check if fullscreen or URL parameter
+        if (
+          document.body.classList.contains("fullscreen") ||
+          shouldStartFullscreen
+        ) {
+          container.style.width = "100%";
+          container.style.height = "100%";
+          // 不设置 canvas.width 和 canvas.height，让Unity自己管理分辨率
+          return;
+        }
+
+        // Desktop normal mode - maintain aspect ratio
+        const windowAspect = wrapperWidth / wrapperHeight;
+        let containerWidth, containerHeight;
+
+        if (windowAspect < ASPECT) {
+          // Window is narrower than game aspect - fit to width
+          containerWidth = Math.min(wrapperWidth * 0.95, 1200); // Max width 1200px
+          containerHeight = containerWidth / ASPECT;
+        } else {
+          // Window is wider than game aspect - fit to height
+          containerHeight = Math.min(wrapperHeight * 0.9, 800); // Max height 800px
+          containerWidth = containerHeight * ASPECT;
+        }
+
+        container.style.width = containerWidth + "px";
+        container.style.height = containerHeight + "px";
+        // 不设置 canvas.width 和 canvas.height，让Unity通过CSS自动缩放
+      }
+
+      function updateOrientation() {
+        if (
+          isMobile() &&
+          window.matchMedia("(orientation: portrait)").matches
+        ) {
+          warnEl.classList.add("active");
+        } else {
+          warnEl.classList.remove("active");
+          resizeCanvas();
+        }
+      }
+
+      // Event listeners
+      window.addEventListener("resize", updateOrientation);
+      window.addEventListener("orientationchange", updateOrientation);
+
+      // Initialize
+      updateOrientation();
+
+      // Check if should start in fullscreen
+      if (shouldStartFullscreen && !isMobile() && !isTablet()) {
+        document.body.classList.add("fullscreen");
+      }
+
+      // Unity loader callback
+      function onProgress(fraction, loadedBytes, totalBytes) {
+        const capScale = 0.75;
+        // Unity tends to overestimate total bytes, adjust for more accurate progress
+        const adjustedTotalBytes = totalBytes ? totalBytes * capScale : 0;
+
+        // Cap loaded bytes to adjusted total to avoid showing more than 100%
+        if (loadedBytes > adjustedTotalBytes) {
+          loadedBytes = adjustedTotalBytes;
+        }
+
+        // Calculate percentage based on actual bytes when available, otherwise use fraction
+        let pct;
+        if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
+          // Use actual bytes for more accurate percentage
+          pct = Math.round((loadedBytes / adjustedTotalBytes) * 100);
+        } else {
+          // Fall back to fraction-based calculation
+          const adjustedFraction = Math.min(fraction / capScale, 1);
+          pct = Math.round(adjustedFraction * 100);
+        }
+        if (pct >= 100) {
+          pct = 99;
+        }
+
+        console.log(
+          `Loading progress: ${pct}% (${loadedBytes} / ${adjustedTotalBytes} bytes)`
+        );
+
+        fillEl.style.width = pct + "%";
+        percentEl.textContent = pct + "%";
+
+        if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
+          bytesEl.textContent =
+            (loadedBytes / 1048576).toFixed(1) +
+            " / " +
+            (adjustedTotalBytes / 1048576).toFixed(1) +
+            " MB";
+        } else {
+          bytesEl.textContent = "Loading...";
+        }
+      }
+
+      // 记录进入浏览器全屏前的状态
+      let wasBodyFullscreen = false;
+
+      // Start Unity
+      createUnityInstance(
+        canvas,
+        {
+          dataUrl: "Build/ccf13770150c7e3d63337521f2de3004.data.br",
+          frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
+          codeUrl: "Build/86a23aaca5d08b7ec403f49f5245e115.wasm.br",
+          companyName: "ZeroPlay",
+          productName: "Backgammon",
+          productVersion: "5.3",
+          streamingAssetsUrl: "StreamingAssets",
+        },
+        onProgress
+      )
+        .then((unityInstance) => {
+          overlay.style.display = "none";
+
+          // 保存unity实例到全局变量
+          window.unityInstance = unityInstance;
+
+          // 全屏按钮点击处理
+          fullscreenBtn.onclick = () => {
+            // 记录当前body是否有fullscreen类
+            wasBodyFullscreen = document.body.classList.contains("fullscreen");
+            unityInstance.SetFullscreen(1);
+          };
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Failed to load Unity: " + err.message);
+        });
+
+      // 监听退出浏览器全屏
+      document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement) {
+          // 恢复进入前的状态
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
+
+      // 兼容其他浏览器
+      document.addEventListener("webkitfullscreenchange", () => {
+        if (!document.webkitFullscreenElement) {
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
+
+      document.addEventListener("mozfullscreenchange", () => {
+        if (!document.mozFullScreenElement) {
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
+
+      document.addEventListener("msfullscreenchange", () => {
+        if (!document.msFullscreenElement) {
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
+    </script>
+  </body>
 </html>
