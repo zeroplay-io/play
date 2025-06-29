@@ -1,128 +1,272 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | Backgammon</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Backgammon</title>
+
+    <!-- ===== DESIGN TOKENS ===== -->
+    <style>
+      :root {
+        --clr-bg: #0e0e11;
+        --clr-card: rgba(255, 255, 255, 0.05);
+        --clr-track: rgba(255, 255, 255, 0.15);
+        --clr-fill-start: #23d5ab;
+        --clr-fill-end: #3b82f6;
+        --radius-lg: 18px;
+        --radius-sm: 10px;
+        --shadow-elev: 0 10px 28px rgba(0, 0, 0, 0.55);
+        --font-base: "Inter", "Helvetica Neue", Arial, sans-serif;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--clr-bg);
+        font-family: var(--font-base);
+        color: #fff;
+        -webkit-font-smoothing: antialiased;
+      }
+      #unity-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      #unity-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+      }
+      #loader-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        pointer-events: none;
+      }
+      #loader-bg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: blur(6px) brightness(0.45);
+      }
+      #loader-card {
+        position: relative;
+        width: min(90vw, 480px);
+        padding: 40px 32px;
+        background: var(--clr-card);
+        border-radius: var(--radius-lg);
+        backdrop-filter: blur(10px);
+        box-shadow: var(--shadow-elev);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+      }
+      #loader-logo {
+        width: 160px;
+        height: auto;
+        object-fit: contain;
+      }
+      #progress-track {
+        width: 100%;
+        height: 26px;
+        background: var(--clr-track);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+      }
+      #progress-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          var(--clr-fill-start),
+          var(--clr-fill-end)
+        );
+      }
+      #percent {
+        font-size: 1.05rem;
+        letter-spacing: 0.5px;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+      #bytes {
+        font-size: 0.85rem;
+        opacity: 0.8;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+      #portrait-warning {
+        position: absolute;
+        inset: 0;
+        background: var(--clr-bg);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 5vw;
+        z-index: 9999;
+      }
+      #portrait-warning.active {
+        display: flex;
+      }
+      @media (max-width: 420px) {
+        #loader-card {
+          padding: 32px 24px;
+          gap: 20px;
+        }
+        #progress-track {
+          height: 22px;
+        }
+        #percent {
+          font-size: 0.95rem;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
+    <div id="unity-container">
+      <div id="loader-overlay">
+        <img id="loader-bg" src="TemplateData/bg.jpg" alt="background" />
+        <div id="loader-card">
+          <img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
+          <div id="progress-track"><div id="progress-fill"></div></div>
+          <div id="percent">0%</div>
+          <div id="bytes">0 / 0 MB</div>
         </div>
       </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-logo-title-footer"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">Backgammon</div>
-      </div>
+      <div id="portrait-warning">Please rotate your device to landscape</div>
+      <canvas id="unity-canvas" tabindex="1"></canvas>
     </div>
+
+    <script src="Build/4f511168bee26cacca170f9f48e6d337.loader.js"></script>
     <script>
-      var canvas = document.querySelector("#unity-canvas");
-
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
-      function unityShowBanner(msg, type) {
-        var warningBanner = document.querySelector("#unity-warning");
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
-
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/4f511168bee26cacca170f9f48e6d337.loader.js";
-      var config = {
-        arguments: [],
-        dataUrl: buildUrl + "/46469bb2c62b6c14684fa5a8988203a8.data.br",
-        frameworkUrl: buildUrl + "/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-        codeUrl: buildUrl + "/57a649ae1d1db59b18839c261435668d.wasm.br",
+      // ---------- CONFIG ----------
+      const buildUrl = "Build";
+      const buildFiles = [
+        "45d0093e8233b93e4c3f92b55b1b9b0c.data.br",
+        "75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
+        "35980a249d0160ed0a4ef1080d01d5ff.wasm.br",
+        "",
+        "",
+      ].filter(Boolean);
+      const config = {
+        dataUrl: `${buildUrl}/45d0093e8233b93e4c3f92b55b1b9b0c.data.br`,
+        frameworkUrl: `${buildUrl}/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br`,
+        codeUrl: `${buildUrl}/35980a249d0160ed0a4ef1080d01d5ff.wasm.br`,
+        memoryUrl: `${buildUrl}/`,
+        symbolsUrl: `${buildUrl}/`,
         streamingAssetsUrl: "StreamingAssets",
         companyName: "ZeroPlay",
         productName: "Backgammon",
-        productVersion: "2.5",
-        showBanner: unityShowBanner,
+        productVersion: "3.1",
+        devicePixelRatio: 1,
       };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
+      // ---------- ORIENTATION ----------
+      const updateOrientation = () =>
+        document
+          .getElementById("portrait-warning")
+          .classList[
+            window.matchMedia("(orientation: portrait)").matches
+              ? "add"
+              : "remove"
+          ]("active");
+      window.addEventListener("orientationchange", updateOrientation);
+      updateOrientation();
 
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
-
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
-
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
+      // ---------- PROGRESS STATE ----------
+      let totalBytes = 0,
+        loadedBytes = 0;
+      const fillEl = document.getElementById("progress-fill"),
+        percentEl = document.getElementById("percent"),
+        bytesEl = document.getElementById("bytes");
+      const MB = 1 << 20;
+      function updateUI() {
+        if (!totalBytes) return;
+        const pct = Math.min(100, Math.round((loadedBytes / totalBytes) * 100));
+        fillEl.style.width = `${pct}%`;
+        percentEl.textContent = `${pct}%`;
+        bytesEl.textContent = `${(loadedBytes / MB).toFixed(1)} / ${(
+          totalBytes / MB
+        ).toFixed(1)} MB`;
       }
 
-      canvas.style.background = "url('" + buildUrl + "/538d7d2faaac20541d8293ecaf1be1ed.jpg') center / cover";
-      document.querySelector("#unity-loading-bar").style.display = "block";
+      // save original fetch once
+      const originalFetch = window.fetch.bind(window);
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
+      async function calcTotal() {
+        const sizes = await Promise.all(
+          buildFiles.map(async (f) => {
+            try {
+              return (
+                +(
+                  await originalFetch(`${buildUrl}/${f}`, { method: "HEAD" })
+                ).headers.get("Content-Length") || 0
+              );
+            } catch {
+              return 0;
+            }
+          })
+        );
+        totalBytes = sizes.reduce((a, b) => a + b, 0);
+        updateUI();
+      }
 
-              }).catch((message) => {
-                alert(message);
+      function streamWithProgress(res) {
+        if (!res.body || !res.body.getReader) return res; // non‑stream fallback
+        const reader = res.body.getReader();
+        const stream = new ReadableStream({
+          start(controller) {
+            const pump = () =>
+              reader.read().then(({ done, value }) => {
+                if (done) {
+                  controller.close();
+                  return;
+                }
+                loadedBytes += value.byteLength;
+                updateUI();
+                controller.enqueue(value);
+                pump();
               });
-            };
+            pump();
+          },
+        });
+        return new Response(stream, { headers: res.headers });
+      }
 
-      document.body.appendChild(script);
+      function fetchProxy(resource, options) {
+        const url = typeof resource === "string" ? resource : resource.url;
+        const shouldTrack = url && url.startsWith(buildUrl);
+        return shouldTrack
+          ? originalFetch(resource, options).then(streamWithProgress)
+          : originalFetch(resource, options);
+      }
 
+      (async () => {
+        await calcTotal();
+        window.fetch = fetchProxy; // patch after totals ready
+        try {
+          await createUnityInstance(
+            document.getElementById("unity-canvas"),
+            config
+          );
+          document.getElementById("loader-overlay").style.display = "none";
+        } catch (e) {
+          alert(e);
+        } finally {
+          window.fetch = originalFetch;
+        }
+      })();
     </script>
   </body>
 </html>
