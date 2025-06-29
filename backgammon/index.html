@@ -150,30 +150,39 @@
 
     <script src="Build/4f511168bee26cacca170f9f48e6d337.loader.js"></script>
     <script>
-      // ---------- CONFIG ----------
+      // ---------- CONFIG & FILE LIST ----------
       const buildUrl = "Build";
+      const dataFile = "75029c125fd8736ac91bdae6cc0af543.data.br";
+      const frameworkFile = "75a5de9c3908e7a1efe3e74bad1de540.framework.js.br";
+      const codeFile = "abffb9693c56323fffc798a0e878106a.wasm.br";
+      const memoryFile = ""; // may be empty
+      const symbolsFile = ""; // may be empty
+
       const buildFiles = [
-        "45d0093e8233b93e4c3f92b55b1b9b0c.data.br",
-        "75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-        "35980a249d0160ed0a4ef1080d01d5ff.wasm.br",
-        "",
-        "",
+        dataFile,
+        frameworkFile,
+        codeFile,
+        memoryFile,
+        symbolsFile,
       ].filter(Boolean);
+
+      // base config
       const config = {
-        dataUrl: `${buildUrl}/45d0093e8233b93e4c3f92b55b1b9b0c.data.br`,
-        frameworkUrl: `${buildUrl}/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br`,
-        codeUrl: `${buildUrl}/35980a249d0160ed0a4ef1080d01d5ff.wasm.br`,
-        memoryUrl: `${buildUrl}/`,
-        symbolsUrl: `${buildUrl}/`,
+        dataUrl: `${buildUrl}/${dataFile}`,
+        frameworkUrl: `${buildUrl}/${frameworkFile}`,
+        codeUrl: `${buildUrl}/${codeFile}`,
         streamingAssetsUrl: "StreamingAssets",
         companyName: "ZeroPlay",
         productName: "Backgammon",
-        productVersion: "3.1",
+        productVersion: "3.2",
         devicePixelRatio: 1,
       };
+      // only attach optional urls if they exist
+      if (memoryFile) config.memoryUrl = `${buildUrl}/${memoryFile}`;
+      if (symbolsFile) config.symbolsUrl = `${buildUrl}/${symbolsFile}`;
 
       // ---------- ORIENTATION ----------
-      const updateOrientation = () =>
+      const updateOrientation = () => {
         document
           .getElementById("portrait-warning")
           .classList[
@@ -181,6 +190,7 @@
               ? "add"
               : "remove"
           ]("active");
+      };
       window.addEventListener("orientationchange", updateOrientation);
       updateOrientation();
 
@@ -201,18 +211,17 @@
         ).toFixed(1)} MB`;
       }
 
-      // save original fetch once
+      // keep a stable original fetch reference
       const originalFetch = window.fetch.bind(window);
 
       async function calcTotal() {
         const sizes = await Promise.all(
           buildFiles.map(async (f) => {
             try {
-              return (
-                +(
-                  await originalFetch(`${buildUrl}/${f}`, { method: "HEAD" })
-                ).headers.get("Content-Length") || 0
-              );
+              const r = await originalFetch(`${buildUrl}/${f}`, {
+                method: "HEAD",
+              });
+              return +r.headers.get("Content-Length") || 0;
             } catch {
               return 0;
             }
@@ -223,11 +232,11 @@
       }
 
       function streamWithProgress(res) {
-        if (!res.body || !res.body.getReader) return res; // non‑stream fallback
+        if (!res.body || !res.body.getReader) return res; // fallback if not stream
         const reader = res.body.getReader();
         const stream = new ReadableStream({
           start(controller) {
-            const pump = () =>
+            (function pump() {
               reader.read().then(({ done, value }) => {
                 if (done) {
                   controller.close();
@@ -238,7 +247,7 @@
                 controller.enqueue(value);
                 pump();
               });
-            pump();
+            })();
           },
         });
         return new Response(stream, { headers: res.headers });
@@ -254,7 +263,8 @@
 
       (async () => {
         await calcTotal();
-        window.fetch = fetchProxy; // patch after totals ready
+        // patch fetch only after we have total size
+        window.fetch = fetchProxy;
         try {
           await createUnityInstance(
             document.getElementById("unity-canvas"),
@@ -264,7 +274,7 @@
         } catch (e) {
           alert(e);
         } finally {
-          window.fetch = originalFetch;
+          window.fetch = originalFetch; // restore
         }
       })();
     </script>
