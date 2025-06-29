@@ -323,6 +323,14 @@
         container.style.height = containerHeight + "px";
         canvas.width = containerWidth;
         canvas.height = containerHeight;
+
+        // Notify Unity about canvas size change
+        if (window.unityInstance) {
+          // Force Unity to update its rendering size
+          setTimeout(() => {
+            window.dispatchEvent(new Event("resize"));
+          }, 100);
+        }
       }
 
       function updateOrientation() {
@@ -383,23 +391,23 @@
 
       // Unity loader callback
       function onProgress(fraction, loadedBytes, totalBytes) {
+        // Unity tends to overestimate total bytes, adjust for more accurate progress
+        const adjustedFraction = Math.min(fraction / 0.8, 1);
+        const adjustedTotalBytes = totalBytes ? totalBytes * 0.8 : 0;
+        const pct = Math.round(adjustedFraction * 100);
+
         console.log(
-          `Loading progress: ${Math.round(
-            fraction * 100
-          )}% (${loadedBytes} / ${totalBytes} bytes)`
+          `Loading progress: ${pct}% (${loadedBytes} / ${adjustedTotalBytes} bytes)`
         );
-        const pct = Math.round(fraction * 100);
+
         fillEl.style.width = pct + "%";
         percentEl.textContent = pct + "%";
-        if (
-          loadedBytes !== undefined &&
-          totalBytes !== undefined &&
-          totalBytes > 0
-        ) {
+
+        if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
           bytesEl.textContent =
             (loadedBytes / 1048576).toFixed(1) +
             " / " +
-            (totalBytes / 1048576).toFixed(1) +
+            (adjustedTotalBytes / 1048576).toFixed(1) +
             " MB";
         } else {
           bytesEl.textContent = "Loading...";
@@ -407,20 +415,24 @@
       }
 
       // Start Unity
+      let unityInstance = null;
+
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/7a1cf63f5999df1c3e63b56e6dffdefc.data.br",
+          dataUrl: "Build/a9f1443bebd64c7032f3d1fbd750a2a2.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/6363b14c0de4851342aab9d60ea15a64.wasm.br",
+          codeUrl: "Build/e77a2743413f80891ded3df64714a847.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "4.2",
+          productVersion: "4.3",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
       )
-        .then(() => {
+        .then((instance) => {
+          unityInstance = instance;
+          window.unityInstance = instance; // Make it globally accessible
           overlay.style.display = "none";
         })
         .catch((err) => {
