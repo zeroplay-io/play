@@ -49,6 +49,7 @@
         width: 100%;
         height: 100%;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         padding: var(--safe-area-inset-top) var(--safe-area-inset-right)
@@ -105,25 +106,18 @@
 
       /* Status bar */
       #status-bar {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
         height: 48px;
-        background: linear-gradient(
-          135deg,
-          rgba(14, 14, 17, 0.95),
-          rgba(26, 26, 29, 0.95)
-        );
+        background: linear-gradient(135deg, rgba(14, 14, 17, 0.95), rgba(26, 26, 29, 0.95));
         backdrop-filter: blur(12px);
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         display: none;
         align-items: center;
         justify-content: space-between;
         padding: 0 16px;
-        z-index: 100;
-        border-radius: 0 0 9px 9px;
-        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+        margin-top: 12px;
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-elev);
+        border: 1px solid rgba(255, 255, 255, 0.08);
       }
 
       #status-left {
@@ -162,14 +156,10 @@
       }
 
       #fullscreen-button::before {
-        content: "";
+        content: '';
         position: absolute;
         inset: 0;
-        background: linear-gradient(
-          135deg,
-          rgba(35, 213, 171, 0.1),
-          rgba(59, 130, 246, 0.1)
-        );
+        background: linear-gradient(135deg, rgba(35, 213, 171, 0.1), rgba(59, 130, 246, 0.1));
         opacity: 0;
         transition: opacity 0.2s ease;
       }
@@ -178,8 +168,7 @@
         background: rgba(255, 255, 255, 0.12);
         border-color: rgba(255, 255, 255, 0.25);
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
-          0 0 20px rgba(35, 213, 171, 0.2);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px rgba(35, 213, 171, 0.2);
       }
 
       #fullscreen-button:hover::before {
@@ -365,20 +354,31 @@
     <div id="game-wrapper">
       <div id="unity-container">
         <canvas id="unity-canvas" tabindex="1"></canvas>
-        <div id="status-bar">
-          <div id="status-left">
-            <img id="status-logo" src="TemplateData/logo.png" alt="logo" />
-            <div id="status-title">Backgammon</div>
-          </div>
-          <button id="fullscreen-button" title="Enter fullscreen">
-            <svg viewBox="0 0 24 24">
-              <path
-                d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
-              />
-            </svg>
-          </button>
-        </div>
         <div id="loader-overlay">
+          <div id="loader-card">
+            <img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
+            <div id="bytes">Loading...</div>
+            <div id="progress-track">
+              <div id="progress-fill"></div>
+              <div class="progress-label">0%</div>
+            </div>
+          </div>
+        </div>
+        <div id="portrait-warning">Please rotate your device to landscape</div>
+      </div>
+      <div id="status-bar">
+        <div id="status-left">
+          <img id="status-logo" src="TemplateData/logo.png" alt="logo">
+          <div id="status-title">Backgammon</div>
+        </div>
+        <button id="fullscreen-button" title="Enter fullscreen">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
+            />
+          </svg>
+        </button>
+      </div>
           <div id="loader-card">
             <img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
             <div id="bytes">Loading...</div>
@@ -550,9 +550,8 @@
 
       // Unity loader callback
       function onProgress(fraction, loadedBytes, totalBytes) {
-        const capScale = 0.75;
         // Unity tends to overestimate total bytes, adjust for more accurate progress
-        const adjustedTotalBytes = totalBytes ? totalBytes * capScale : 0;
+        const adjustedTotalBytes = totalBytes ? totalBytes * 0.8 : 0;
 
         // Cap loaded bytes to adjusted total to avoid showing more than 100%
         if (loadedBytes > adjustedTotalBytes) {
@@ -566,11 +565,8 @@
           pct = Math.round((loadedBytes / adjustedTotalBytes) * 100);
         } else {
           // Fall back to fraction-based calculation
-          const adjustedFraction = Math.min(fraction / capScale, 1);
+          const adjustedFraction = Math.min(fraction / 0.8, 1);
           pct = Math.round(adjustedFraction * 100);
-        }
-        if (pct >= 100) {
-          pct = 99;
         }
 
         console.log(
@@ -598,26 +594,26 @@
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/ccf13770150c7e3d63337521f2de3004.data.br",
+          dataUrl: "Build/a69c5e736261a68a338f9f184417afe5.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/86a23aaca5d08b7ec403f49f5245e115.wasm.br",
+          codeUrl: "Build/2731ee06899fdb120aa96dbaefc4c41b.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "5.3",
+          productVersion: "5.4",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
       )
         .then((unityInstance) => {
           overlay.style.display = "none";
-
+          
           // 保存unity实例到全局变量
           window.unityInstance = unityInstance;
-
+          
           // 全屏按钮点击处理
           fullscreenBtn.onclick = () => {
             // 记录当前body是否有fullscreen类
-            wasBodyFullscreen = document.body.classList.contains("fullscreen");
+            wasBodyFullscreen = document.body.classList.contains('fullscreen');
             unityInstance.SetFullscreen(1);
           };
         })
@@ -627,47 +623,47 @@
         });
 
       // 监听退出浏览器全屏
-      document.addEventListener("fullscreenchange", () => {
+      document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement) {
           // 恢复进入前的状态
           if (wasBodyFullscreen) {
-            document.body.classList.add("fullscreen");
+            document.body.classList.add('fullscreen');
           } else {
-            document.body.classList.remove("fullscreen");
+            document.body.classList.remove('fullscreen');
           }
           resizeCanvas();
         }
       });
 
       // 兼容其他浏览器
-      document.addEventListener("webkitfullscreenchange", () => {
+      document.addEventListener('webkitfullscreenchange', () => {
         if (!document.webkitFullscreenElement) {
           if (wasBodyFullscreen) {
-            document.body.classList.add("fullscreen");
+            document.body.classList.add('fullscreen');
           } else {
-            document.body.classList.remove("fullscreen");
+            document.body.classList.remove('fullscreen');
           }
           resizeCanvas();
         }
       });
 
-      document.addEventListener("mozfullscreenchange", () => {
+      document.addEventListener('mozfullscreenchange', () => {
         if (!document.mozFullScreenElement) {
           if (wasBodyFullscreen) {
-            document.body.classList.add("fullscreen");
+            document.body.classList.add('fullscreen');
           } else {
-            document.body.classList.remove("fullscreen");
+            document.body.classList.remove('fullscreen');
           }
           resizeCanvas();
         }
       });
 
-      document.addEventListener("msfullscreenchange", () => {
+      document.addEventListener('msfullscreenchange', () => {
         if (!document.msFullscreenElement) {
           if (wasBodyFullscreen) {
-            document.body.classList.add("fullscreen");
+            document.body.classList.add('fullscreen');
           } else {
-            document.body.classList.remove("fullscreen");
+            document.body.classList.remove('fullscreen');
           }
           resizeCanvas();
         }
