@@ -517,27 +517,30 @@
         }
       }
 
-      // Start Unity
-      let unityInstance = null;
+      // 记录进入浏览器全屏前的状态
+      let wasBodyFullscreen = false;
 
+      // Start Unity
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/543fe9b7b3b6d4151e9bccea2c6a0924.data.br",
+          dataUrl: "Build/c5850183e56f62341dd0e38ccb6e59fa.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/eececf10b716974b29ece116fa5e6f7f.wasm.br",
+          codeUrl: "Build/ea3a8ef3629801bdea87b491386da0b5.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "4.9",
+          productVersion: "5.0",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
       )
-        .then((instance) => {
-          unityInstance = instance;
-          window.unityInstance = instance; // Make it globally accessible
+        .then((unityInstance) => {
           overlay.style.display = "none";
+
+          // 全屏按钮点击处理
           fullscreenBtn.onclick = () => {
+            // 记录当前body是否有fullscreen类
+            wasBodyFullscreen = document.body.classList.contains("fullscreen");
             unityInstance.SetFullscreen(1);
           };
         })
@@ -545,6 +548,53 @@
           console.error(err);
           alert("Failed to load Unity: " + err.message);
         });
+
+      // 监听退出浏览器全屏
+      document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement) {
+          // 恢复进入前的状态
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
+
+      // 兼容其他浏览器
+      document.addEventListener("webkitfullscreenchange", () => {
+        if (!document.webkitFullscreenElement) {
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
+
+      document.addEventListener("mozfullscreenchange", () => {
+        if (!document.mozFullScreenElement) {
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
+
+      document.addEventListener("msfullscreenchange", () => {
+        if (!document.msFullscreenElement) {
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          resizeCanvas();
+        }
+      });
     </script>
   </body>
 </html>
