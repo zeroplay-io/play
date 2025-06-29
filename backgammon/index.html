@@ -19,7 +19,6 @@
         --shadow-elev: 0 10px 28px rgba(0, 0, 0, 0.55);
         --font-base: "Inter", "Helvetica Neue", Arial, sans-serif;
       }
-
       html,
       body {
         margin: 0;
@@ -30,29 +29,27 @@
         font-family: var(--font-base);
         color: #fff;
         -webkit-font-smoothing: antialiased;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
       #unity-container {
         position: relative;
-        width: 100%;
-        height: 100%;
       }
       #unity-canvas {
-        position: absolute;
-        inset: 0;
         width: 100%;
         height: 100%;
+        display: block;
         background: transparent;
       }
-
-      /* ---------- Loader ---------- */
       #loader-overlay {
         position: absolute;
         inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 10;
         pointer-events: none;
+        z-index: 10;
       }
       #loader-bg {
         position: absolute;
@@ -75,11 +72,6 @@
         align-items: center;
         gap: 28px;
       }
-      #loader-logo {
-        width: 160px;
-        height: auto;
-        object-fit: contain;
-      }
       #progress-track {
         width: 100%;
         height: 26px;
@@ -98,7 +90,6 @@
       }
       #percent {
         font-size: 1.05rem;
-        letter-spacing: 0.5px;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
       }
       #bytes {
@@ -106,8 +97,6 @@
         opacity: 0.8;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
       }
-
-      /* ---------- Orientation ---------- */
       #portrait-warning {
         position: absolute;
         inset: 0;
@@ -122,27 +111,19 @@
       #portrait-warning.active {
         display: flex;
       }
-
-      @media (max-width: 420px) {
-        #loader-card {
-          padding: 32px 24px;
-          gap: 20px;
-        }
-        #progress-track {
-          height: 22px;
-        }
-        #percent {
-          font-size: 0.95rem;
-        }
-      }
     </style>
   </head>
   <body>
     <div id="unity-container">
       <div id="loader-overlay">
-        <img id="loader-bg" src="TemplateData/bg.jpg" alt="background" />
+        <img id="loader-bg" src="TemplateData/bg.jpg" alt="bg" />
         <div id="loader-card">
-          <img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
+          <img
+            id="loader-logo"
+            src="TemplateData/logo.png"
+            alt="logo"
+            style="width: 160px; height: auto; object-fit: contain"
+          />
           <div id="progress-track"><div id="progress-fill"></div></div>
           <div id="percent">0%</div>
           <div id="bytes">0 / 0 MB</div>
@@ -154,11 +135,12 @@
 
     <script src="Build/4f511168bee26cacca170f9f48e6d337.loader.js"></script>
     <script>
-      /* ---------- BUILD META ---------- */
+      /* ---------- CONSTANTS ---------- */
+      const ASPECT = 16 / 9;
       const buildUrl = "Build";
-      const dataFile = "3c26b8be9cfe4f7647dd6654e5eeca35.data.br";
+      const dataFile = "b1f5c92a5b84369bb823956470a2cd2e.data.br";
       const frameworkFile = "75a5de9c3908e7a1efe3e74bad1de540.framework.js.br";
-      const codeFile = "744b013fe526cd9a33d1c7cf48063e5f.wasm.br";
+      const codeFile = "3b624e2c7a7f3d2ddc7334111e14e5a4.wasm.br";
       const memoryFile = "";
       const symbolsFile = "";
       const buildFiles = [
@@ -177,111 +159,135 @@
         streamingAssetsUrl: "StreamingAssets",
         companyName: "ZeroPlay",
         productName: "Backgammon",
-        productVersion: "3.3",
+        productVersion: "3.5",
         devicePixelRatio: 1,
       };
       if (memoryFile) config.memoryUrl = `${buildUrl}/${memoryFile}`;
       if (symbolsFile) config.symbolsUrl = `${buildUrl}/${symbolsFile}`;
 
-      /* ---------- ORIENTATION (mobile only) ---------- */
+      /* ---------- ELEMENTS ---------- */
+      const container = document.getElementById("unity-container");
+      const canvas = document.getElementById("unity-canvas");
+      const warnEl = document.getElementById("portrait-warning");
+      const fillEl = document.getElementById("progress-fill");
+      const percentEl = document.getElementById("percent");
+      const bytesEl = document.getElementById("bytes");
+
+      /* ---------- ORIENTATION & RESIZE ---------- */
       function isMobile() {
         return (
           /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
           window.matchMedia("(pointer:coarse)").matches
         );
       }
-      function updateOrientation() {
-        const warn = document.getElementById("portrait-warning");
-        const need =
-          isMobile() && window.matchMedia("(orientation: portrait)").matches;
-        warn.classList[need ? "add" : "remove"]("active");
+      function resizeDesktop() {
+        const w = window.innerWidth,
+          h = window.innerHeight;
+        let cw = w,
+          ch = w / ASPECT;
+        if (ch > h) {
+          ch = h;
+          cw = h * ASPECT;
+        }
+        container.style.width = `${cw}px`;
+        container.style.height = `${ch}px`;
+        canvas.width = cw;
+        canvas.height = ch;
       }
-      window.addEventListener("orientationchange", updateOrientation);
+      function updateOrientation() {
+        const mobile = isMobile();
+        const portrait = window.matchMedia("(orientation: portrait)").matches;
+        warnEl.classList[mobile && portrait ? "add" : "remove"]("active");
+        if (!mobile) resizeDesktop();
+      }
       window.addEventListener("resize", updateOrientation);
+      window.addEventListener("orientationchange", updateOrientation);
       updateOrientation();
 
-      /* ---------- PROGRESS STATE ---------- */
+      /* ---------- PROGRESS ---------- */
       let totalBytes = 0,
         loadedBytes = 0;
-      const fillEl = document.getElementById("progress-fill");
-      const percentEl = document.getElementById("percent");
-      const bytesEl = document.getElementById("bytes");
       const MB = 1 << 20;
       function updateUI() {
         if (!totalBytes) return;
-        const pct = Math.min(100, Math.round((loadedBytes / totalBytes) * 100));
-        fillEl.style.width = `${pct}%`;
-        percentEl.textContent = `${pct}%`;
+        const pct = Math.round((loadedBytes / totalBytes) * 100);
+        fillEl.style.width = pct + "%";
+        percentEl.textContent = pct + "%";
         bytesEl.textContent = `${(loadedBytes / MB).toFixed(1)} / ${(
           totalBytes / MB
         ).toFixed(1)} MB`;
       }
 
-      /* ---------- FETCH HELPERS ---------- */
       const originalFetch = window.fetch.bind(window);
-
+      async function getFileSize(f) {
+        const url = `${buildUrl}/${f}`;
+        try {
+          const r = await originalFetch(url, { method: "HEAD" });
+          const len = +r.headers.get("Content-Length");
+          if (len) return len;
+        } catch {}
+        try {
+          const r = await originalFetch(url, {
+            method: "GET",
+            headers: { Range: "bytes=0-0" },
+          });
+          const cr = r.headers.get("Content-Range");
+          if (cr) {
+            const m = cr.match(/\/(\d+)$/);
+            if (m) return +m[1];
+          }
+        } catch {}
+        return 0;
+      }
       async function calcTotal() {
-        const sizes = await Promise.all(
-          buildFiles.map(async (f) => {
-            try {
-              const r = await originalFetch(`${buildUrl}/${f}`, {
-                method: "HEAD",
-              });
-              return +r.headers.get("Content-Length") || 0;
-            } catch {
-              return 0;
-            }
-          })
-        );
+        const sizes = await Promise.all(buildFiles.map(getFileSize));
         totalBytes = sizes.reduce((a, b) => a + b, 0);
         updateUI();
       }
 
       function streamWithProgress(res) {
         if (!res.body || !res.body.getReader) return res;
-        const reader = res.body.getReader();
-        const stream = new ReadableStream({
-          start(controller) {
+        const rd = res.body.getReader();
+        const st = new ReadableStream({
+          start(c) {
             (function pump() {
-              reader.read().then(({ done, value }) => {
+              rd.read().then(({ done, value }) => {
                 if (done) {
-                  controller.close();
+                  c.close();
                   return;
                 }
                 loadedBytes += value.byteLength;
                 updateUI();
-                controller.enqueue(value);
+                c.enqueue(value);
                 pump();
               });
             })();
           },
         });
-        return new Response(stream, { headers: res.headers });
+        return new Response(st, { headers: res.headers });
       }
-
-      function isBinaryAsset(url) {
+      function isBin(url) {
         return /\.(wasm|data|mem|symbols)(\.br)?$/i.test(url);
       }
-
-      function fetchProxy(resource, options) {
-        const url = typeof resource === "string" ? resource : resource.url;
-        const track = url && url.startsWith(buildUrl) && isBinaryAsset(url);
+      function fetchProxy(r, opt = {}) {
+        const u = typeof r === "string" ? r : r.url;
+        const track = u && u.startsWith(buildUrl) && isBin(u);
         return track
-          ? originalFetch(resource, options).then(streamWithProgress)
-          : originalFetch(resource, options);
+          ? originalFetch(r, { ...opt, cache: "reload" }).then(
+              streamWithProgress
+            )
+          : originalFetch(r, opt);
       }
 
-      /* ---------- BOOTSTRAP ---------- */
+      /* ---------- BOOT ---------- */
       (async () => {
         await calcTotal();
         window.fetch = fetchProxy;
         try {
-          await createUnityInstance(
-            document.getElementById("unity-canvas"),
-            config
-          );
+          await createUnityInstance(canvas, config);
           document.getElementById("loader-overlay").style.display = "none";
         } catch (e) {
+          console.error(e);
           alert(e);
         } finally {
           window.fetch = originalFetch;
