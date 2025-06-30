@@ -1,787 +1,833 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-	<meta charset="utf-8" />
-	<meta name="viewport"
-		content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-	<meta http-equiv="Pragma" content="no-cache" />
-	<meta http-equiv="Expires" content="0" />
-	<title>Backgammon</title>
-	<style>
-		:root {
-			/* 更精致的背景配色 - 温暖的中性色调 */
-			--clr-bg: #fafbfc;
-			--clr-bg-gradient: linear-gradient(135deg,
-					#ffffff 0%,
-					#f7fafc 20%,
-					#eef2f5 40%,
-					#e3e8ed 60%,
-					#f0f4f8 80%,
-					#fafbfc 100%);
-			/* 添加细微的纹理背景 */
-			--clr-bg-pattern: radial-gradient(circle at 20% 80%,
-					rgba(120, 119, 198, 0.05) 0%,
-					transparent 50%),
-				radial-gradient(circle at 80% 20%,
-					rgba(59, 130, 246, 0.05) 0%,
-					transparent 50%),
-				radial-gradient(circle at 40% 40%,
-					rgba(35, 213, 171, 0.03) 0%,
-					transparent 50%);
-			--clr-card: rgba(255, 255, 255, 0.95);
-			--clr-card-border: rgba(0, 0, 0, 0.06);
-			--clr-track: rgba(0, 0, 0, 0.08);
-			--clr-fill-start: #23d5ab;
-			--clr-fill-end: #3b82f6;
-			--clr-text: #1a202c;
-			--clr-text-secondary: #64748b;
-			--radius-lg: 20px;
-			--radius-sm: 12px;
-			--shadow-elev: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-				0 2px 4px -1px rgba(0, 0, 0, 0.06);
-			--shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-				0 10px 10px -5px rgba(0, 0, 0, 0.04);
-			--font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-				"Helvetica Neue", Arial, sans-serif;
-
-			/* 安全区域 - 支持所有方向 */
-			--safe-area-inset-top: env(safe-area-inset-top, 0px);
-			--safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
-			--safe-area-inset-left: env(safe-area-inset-left, 0px);
-			--safe-area-inset-right: env(safe-area-inset-right, 0px);
-			--status-bar-height: 52px;
-		}
-
-		* {
-			box-sizing: border-box;
-		}
-
-		html,
-		body {
-			margin: 0;
-			width: 100%;
-			height: 100%;
-			overflow: hidden;
-			background: var(--clr-bg-gradient), var(--clr-bg-pattern);
-			background-attachment: fixed;
-			color: var(--clr-text);
-			font-family: var(--font-base);
-			-webkit-font-smoothing: antialiased;
-			-moz-osx-font-smoothing: grayscale;
-			position: relative;
-		}
-
-		/* 添加一个微妙的动画背景效果 */
-		body::before {
-			content: "";
-			position: fixed;
-			top: -50%;
-			left: -50%;
-			width: 200%;
-			height: 200%;
-			background: radial-gradient(circle,
-					rgba(59, 130, 246, 0.04) 0%,
-					transparent 70%);
-			animation: gentleFloat 20s ease-in-out infinite;
-			pointer-events: none;
-		}
-
-		@keyframes gentleFloat {
-
-			0%,
-			100% {
-				transform: translate(0, 0) scale(1);
-			}
-
-			50% {
-				transform: translate(-30px, -30px) scale(1.1);
-			}
-		}
-
-		#game-wrapper {
-			width: 100%;
-			height: 100%;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			/* 默认考虑所有方向的安全区域 */
-			padding: var(--safe-area-inset-top) var(--safe-area-inset-right) var(--safe-area-inset-bottom) var(--safe-area-inset-left);
-		}
-
-		#unity-container {
-			position: relative;
-			background: #ffffff;
-			box-shadow: var(--shadow-elev);
-			border-radius: var(--radius-lg);
-			overflow: hidden;
-			display: flex;
-			flex-direction: column;
-			border: 1px solid var(--clr-card-border);
-		}
-
-		#unity-canvas {
-			display: block;
-			width: 100%;
-			flex: 1;
-			border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-			background: #000;
-			opacity: 0;
-			transition: opacity 0.3s ease;
-		}
-
-		/* 状态栏默认隐藏 */
-		/* 状态栏默认隐藏 */
-		#status-bar {
-			width: 100%;
-			height: var(--status-bar-height);
-			background: rgba(255, 255, 255, 0.98);
-			backdrop-filter: blur(20px) saturate(1.8);
-			border-top: 1px solid var(--clr-card-border);
-			display: none;
-			align-items: center;
-			justify-content: space-between;
-			padding: 0 24px;
-			z-index: 100;
-			border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-			flex-shrink: 0;
-		}
-
-		#status-left {
-			display: flex;
-			align-items: center;
-			gap: 12px;
-		}
-
-		#status-logo {
-			width: 28px;
-			height: 28px;
-			border-radius: 8px;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-		}
-
-		#status-title {
-			font-size: 15px;
-			font-weight: 600;
-			color: var(--clr-text);
-			letter-spacing: -0.01em;
-		}
-
-		#fullscreen-button {
-			width: 36px;
-			height: 36px;
-			background: rgba(0, 0, 0, 0.04);
-			border: 1px solid rgba(0, 0, 0, 0.08);
-			border-radius: 8px;
-			cursor: pointer;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			transition: all 0.2s ease;
-			position: relative;
-			overflow: hidden;
-		}
-
-		#fullscreen-button:hover {
-			background: rgba(0, 0, 0, 0.08);
-			border-color: rgba(0, 0, 0, 0.12);
-		}
-
-		#fullscreen-button:active {
-			transform: translateY(0);
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-		}
-
-		#fullscreen-button svg {
-			width: 18px;
-			height: 18px;
-			fill: var(--clr-text);
-			opacity: 0.8;
-		}
-
-		#fullscreen-button:hover svg {
-			opacity: 1;
-		}
-
-		/* 桌面端 - 默认显示状态栏 */
-		@media (min-width: 1024px) and (pointer: fine) {
-			#status-bar {
-				display: flex !important;
-			}
-
-			body.fullscreen #status-bar,
-			body.browser-fullscreen #status-bar {
-				display: none !important;
-			}
-
-			body:not(.fullscreen):not(.browser-fullscreen) #unity-container {
-				overflow: visible !important;
-				height: auto !important;
-			}
-		}
-
-		/* 全屏模式（包括 fullscreen 和 browser-fullscreen）- 无圆角，无边框，铺满屏幕 */
-		body.fullscreen #game-wrapper,
-		body.browser-fullscreen #game-wrapper {
-			padding: 0;
-		}
-
-		body.fullscreen #unity-container,
-		body.browser-fullscreen #unity-container {
-			width: 100% !important;
-			height: 100% !important;
-			box-shadow: none !important;
-			border-radius: 0 !important;
-			border: none !important;
-		}
-
-		body.fullscreen #unity-canvas,
-		body.browser-fullscreen #unity-canvas {
-			border-radius: 0 !important;
-		}
-
-		/* 移动端和平板 - 始终铺满，无状态栏，无圆角 */
-		@media (max-width: 1023px) {
-			#game-wrapper {
-				padding: 0;
-				padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-			}
-
-			#unity-container {
-				width: 100% !important;
-				height: 100% !important;
-				border-radius: 0 !important;
-				border: none !important;
-				box-shadow: none !important;
-				background: #000 !important;
-				/* 确保背景是黑色 */
-			}
-
-			#unity-canvas {
-				border-radius: 0 !important;
-				width: 100% !important;
-				height: 100% !important;
-			}
-
-			#status-bar {
-				display: none !important;
-			}
-
-			/* 移动端移除背景动画以提高性能 */
-			body::before {
-				display: none;
-			}
-		}
-
-		/* 加载器覆盖层 */
-		#loader-overlay {
-			position: absolute;
-			inset: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: rgba(250, 251, 252, 0.98);
-			backdrop-filter: blur(20px);
-			z-index: 10;
-			border-radius: inherit;
-		}
-
-		#loader-card {
-			background: var(--clr-card);
-			backdrop-filter: blur(20px);
-			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-			border-radius: var(--radius-lg);
-			border: 1px solid var(--clr-card-border);
-			padding: 40px;
-			display: flex;
-			flex-direction: column;
-			gap: 20px;
-			text-align: center;
-			max-width: 90vw;
-			width: 380px;
-			align-items: center;
-		}
-
-		#loader-logo {
-			width: 120px;
-			height: auto;
-			object-fit: contain;
-			margin-bottom: 20px;
-			filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
-		}
-
-		#progress-track {
-			position: relative;
-			width: 100%;
-			height: 24px;
-			background: var(--clr-track);
-			border-radius: 12px;
-			overflow: hidden;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-
-		#progress-fill {
-			position: absolute;
-			left: 0;
-			top: 0;
-			width: 0%;
-			height: 100%;
-			background: linear-gradient(90deg,
-					var(--clr-fill-start),
-					var(--clr-fill-end));
-			transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-			border-radius: 12px;
-			box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-		}
-
-		#progress-track .progress-label {
-			position: relative;
-			z-index: 1;
-			font-size: 14px;
-			font-weight: 600;
-			color: var(--clr-text);
-			pointer-events: none;
-		}
-
-		#bytes {
-			font-size: 13px;
-			color: var(--clr-text-secondary);
-			font-weight: 500;
-		}
-
-		/* 竖屏警告 */
-		#portrait-warning {
-			position: absolute;
-			inset: 0;
-			display: none;
-			align-items: center;
-			justify-content: center;
-			background: rgba(255, 255, 255, 0.98);
-			backdrop-filter: blur(20px);
-			font-size: 18px;
-			text-align: center;
-			padding: 40px;
-			z-index: 20;
-			border-radius: inherit;
-			color: var(--clr-text);
-		}
-
-		#portrait-warning.active {
-			display: flex;
-		}
-
-		/* 确保在横屏 iPad 上也能正确显示 */
-		@media (orientation: landscape) and (max-width: 1023px) {
-			#portrait-warning {
-				display: none !important;
-			}
-		}
-
-		/* 针对 iOS 设备的优化 */
-		@supports (padding: env(safe-area-inset-top)) {
-
-			/* 默认情况下，考虑安全区域 */
-			#game-wrapper {
-				padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-			}
-
-			/* 桌面端全屏时移除安全区域 */
-			@media (min-width: 1024px) {
-
-				body.fullscreen #game-wrapper,
-				body.browser-fullscreen #game-wrapper {
-					padding: 0;
-				}
-			}
-
-			/* 移动端始终保持安全区域，避免内容被遮挡 */
-			@media (max-width: 1023px) {
-				#game-wrapper {
-					padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-				}
-			}
-		}
-
-	</style>
-</head>
-
-<body>
-	<div id="game-wrapper">
-		<div id="unity-container">
-			<canvas id="unity-canvas" tabindex="1"></canvas>
-			<div id="status-bar">
-				<div id="status-left">
-					<img id="status-logo" src="TemplateData/logo.png" alt="logo" />
-					<div id="status-title">Backgammon</div>
-				</div>
-				<button id="fullscreen-button" title="Enter fullscreen">
-					<svg viewBox="0 0 24 24">
-						<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
-					</svg>
-				</button>
-			</div>
-			<div id="loader-overlay">
-				<div id="loader-card">
-					<img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
-					<div id="bytes">Loading...</div>
-					<div id="progress-track">
-						<div id="progress-fill"></div>
-						<div class="progress-label">0%</div>
-					</div>
-				</div>
-			</div>
-			<div id="portrait-warning">Please rotate your device to landscape</div>
-		</div>
-	</div>
-
-	<script src="loader.js"></script>
-	<script>
-		// Check URL parameters
-		const urlParams = new URLSearchParams(window.location.search);
-		const shouldStartFullscreen = urlParams.get("fullscreen") === "true";
-		const shouldClearCache = urlParams.get("clear") === "true";
-
-		// Clear all possible caches and storage if requested
-		async function clearAllCaches() {
-			console.log("Starting cache cleanup...");
-
-			// Clear Service Workers
-			if ("serviceWorker" in navigator) {
-				const registrations =
-					await navigator.serviceWorker.getRegistrations();
-				for (let registration of registrations) {
-					await registration.unregister();
-				}
-				console.log("Service Workers cleared");
-			}
-
-			// Clear Cache Storage
-			if ("caches" in window) {
-				const cacheNames = await caches.keys();
-				await Promise.all(
-					cacheNames.map((cacheName) => caches.delete(cacheName))
-				);
-				console.log("Cache Storage cleared");
-			}
-
-			// Clear IndexedDB
-			if (window.indexedDB && window.indexedDB.databases) {
-				try {
-					const databases = await indexedDB.databases();
-					databases.forEach((db) => {
-						indexedDB.deleteDatabase(db.name);
-					});
-					console.log("IndexedDB cleared");
-				} catch (e) {
-					console.log("IndexedDB clear failed:", e);
-				}
-			}
-
-			console.log("Cache cleanup complete");
-		}
-
-		// Run cleanup if requested via URL parameter
-		(async () => {
-			if (shouldClearCache) {
-				await clearAllCaches();
-				// Remove the clear parameter and reload
-				urlParams.delete("clear");
-				const newUrl =
-					window.location.pathname +
-					(urlParams.toString() ? "?" + urlParams.toString() : "");
-				window.location.replace(newUrl);
-			}
-		})();
-
-		const ASPECT = 16 / 9; // 改为更常见的 16:9 比例
-		const container = document.getElementById("unity-container");
-		const canvas = document.getElementById("unity-canvas");
-		const overlay = document.getElementById("loader-overlay");
-		const fillEl = document.getElementById("progress-fill");
-		const percentEl = document.querySelector(
-			"#progress-track .progress-label"
-		);
-		const bytesEl = document.getElementById("bytes");
-		const warnEl = document.getElementById("portrait-warning");
-		const fullscreenBtn = document.getElementById("fullscreen-button");
-
-		// Show loading message if clearing cache
-		if (shouldClearCache) {
-			bytesEl.textContent = "Clearing cache...";
-		}
-
-		function isMobile() {
-			return (
-				window.innerWidth <= 767 ||
-				("ontouchstart" in window && window.innerWidth <= 1023)
-			);
-		}
-
-		function isTablet() {
-			return window.innerWidth >= 768 && window.innerWidth <= 1023;
-		}
-
-		function isDesktop() {
-			return window.innerWidth >= 1024 && !("ontouchstart" in window);
-		}
-
-		function resizeCanvas() {
-			const wrapper = document.getElementById("game-wrapper");
-			const wrapperWidth = wrapper.clientWidth;
-			const wrapperHeight = wrapper.clientHeight;
-
-			// 移动端和平板，或者全屏模式 - 始终铺满
-			if (
-				isMobile() ||
-				isTablet() ||
-				document.body.classList.contains("fullscreen") ||
-				document.body.classList.contains("browser-fullscreen") ||
-				shouldStartFullscreen
-			) {
-				container.style.width = "100%";
-				container.style.height = "100%";
-				return;
-			}
-
-			// 桌面端正常模式 - 保持比例
-			if (isDesktop()) {
-				const windowAspect = wrapperWidth / wrapperHeight;
-				let containerWidth, containerHeight;
-
-				if (windowAspect < ASPECT) {
-					// 窗口比游戏窄 - 适应宽度
-					containerWidth = Math.min(wrapperWidth * 0.9, 1400);
-					containerHeight = containerWidth / ASPECT;
-
-					// 确保不超过高度
-					if (containerHeight > wrapperHeight * 0.9) {
-						containerHeight = wrapperHeight * 0.9;
-						containerWidth = containerHeight * ASPECT;
-					}
-				} else {
-					// 窗口比游戏宽 - 适应高度
-					containerHeight = Math.min(wrapperHeight * 0.85, 900);
-					containerWidth = containerHeight * ASPECT;
-				}
-
-				container.style.width = containerWidth + "px";
-				container.style.height = containerHeight + "px";
-			}
-		}
-
-		function updateOrientation() {
-			// 只在真正的移动设备上显示竖屏警告
-			if (
-				isMobile() &&
-				window.matchMedia("(orientation: portrait)").matches
-			) {
-				warnEl.classList.add("active");
-				// 竖屏时不调整大小，等待横屏
-				return;
-			} else {
-				warnEl.classList.remove("active");
-				// 延迟执行以确保旋转动画完成
-				setTimeout(() => {
-					resizeCanvas();
-					// 强制重新计算布局
-					container.style.display = "none";
-					container.offsetHeight; // 触发重排
-					container.style.display = "flex";
-
-					// 如果有 Unity 实例，通知它窗口大小改变
-					if (window.unityInstance) {
-						const rect = canvas.getBoundingClientRect();
-						console.log(
-							"Canvas size after rotation:",
-							rect.width,
-							rect.height
-						);
-					}
-				}, 100);
-			}
-		}
-
-		// 防抖函数
-		function debounce(func, wait) {
-			let timeout;
-			return function executedFunction(...args) {
-				const later = () => {
-					clearTimeout(timeout);
-					func(...args);
-				};
-				clearTimeout(timeout);
-				timeout = setTimeout(later, wait);
-			};
-		}
-
-		// 使用防抖处理 resize 事件
-		const debouncedResize = debounce(updateOrientation, 150);
-
-		// Event listeners
-		window.addEventListener("resize", debouncedResize);
-		window.addEventListener("orientationchange", () => {
-			// 立即隐藏/显示警告
-			if (
-				isMobile() &&
-				window.matchMedia("(orientation: portrait)").matches
-			) {
-				warnEl.classList.add("active");
-			} else {
-				warnEl.classList.remove("active");
-			}
-			// 延迟处理布局更新
-			setTimeout(updateOrientation, 300);
-		});
-
-		// Initialize
-		updateOrientation();
-
-		// Check if should start in fullscreen
-		if (shouldStartFullscreen) {
-			document.body.classList.add("fullscreen");
-			resizeCanvas();
-		}
-
-		// Unity loader callback
-		function onProgress(fraction, loadedBytes, totalBytes) {
-			const capScale = 0.75;
-			const adjustedTotalBytes = totalBytes ? totalBytes * capScale : 0;
-
-			if (loadedBytes > adjustedTotalBytes) {
-				loadedBytes = adjustedTotalBytes;
-			}
-
-			let pct;
-			if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
-				pct = Math.round((loadedBytes / adjustedTotalBytes) * 100);
-			} else {
-				const adjustedFraction = Math.min(fraction / capScale, 1);
-				pct = Math.round(adjustedFraction * 100);
-			}
-
-			// 限制在 99% 以避免过早显示 100%
-			if (pct >= 100) {
-				pct = 99;
-			}
-
-			fillEl.style.width = pct + "%";
-			percentEl.textContent = pct + "%";
-
-			if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
-				bytesEl.textContent =
-					(loadedBytes / 1048576).toFixed(1) +
-					" / " +
-					(adjustedTotalBytes / 1048576).toFixed(1) +
-					" MB";
-			} else {
-				bytesEl.textContent = "Loading...";
-			}
-		}
-
-		// Track fullscreen state
-		let wasBodyFullscreen = false;
-
-		// Start Unity
-		createUnityInstance(
-			canvas,
-			{
-				dataUrl: "Build/5cc95cd3874645828a794725311459ad.data.br",
-				frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-				codeUrl: "Build/b83d4031e4ccdb45091c4949ad75828f.wasm.br",
-				companyName: "ZeroPlay",
-				productName: "Backgammon",
-				productVersion: "6.2",
-				streamingAssetsUrl: "StreamingAssets",
-			},
-			onProgress
-		)
-			.then((unityInstance) => {
-				overlay.style.display = "none";
-				window.unityInstance = unityInstance;
-
-				// Fullscreen button click handler
-				fullscreenBtn.onclick = () => {
-					wasBodyFullscreen = document.body.classList.contains("fullscreen");
-					document.body.classList.add("browser-fullscreen");
-					unityInstance.SetFullscreen(1);
-				};
-
-				// 触发一次 resize 确保正确布局
-				setTimeout(() => {
-					resizeCanvas();
-					// 防止初始加载时 canvas 闪烁
-					canvas.style.opacity = "1";
-
-					// 移动设备上监听视口变化
-					if (isMobile() || isTablet()) {
-						let lastWidth = window.innerWidth;
-						let lastHeight = window.innerHeight;
-
-						setInterval(() => {
-							if (
-								window.innerWidth !== lastWidth ||
-								window.innerHeight !== lastHeight
-							) {
-								lastWidth = window.innerWidth;
-								lastHeight = window.innerHeight;
-								console.log("Viewport changed:", lastWidth, "x", lastHeight);
-								resizeCanvas();
-							}
-						}, 500);
-					}
-				}, 100);
-			})
-			.catch((err) => {
-				console.error(err);
-				alert("Failed to load Unity: " + err.message);
-			});
-
-		// 处理全屏状态变化
-		function handleFullscreenChange() {
-			const isInFullscreen =
-				document.fullscreenElement ||
-				document.webkitFullscreenElement ||
-				document.mozFullScreenElement ||
-				document.msFullscreenElement;
-
-			if (!isInFullscreen) {
-				document.body.classList.remove("browser-fullscreen");
-				if (wasBodyFullscreen) {
-					document.body.classList.add("fullscreen");
-				} else {
-					document.body.classList.remove("fullscreen");
-				}
-				// 延迟调整大小，确保状态栏渲染完成
-				setTimeout(() => {
-					resizeCanvas();
-					// 通知 Unity 调整视口
-					if (window.unityInstance) {
-						window.unityInstance.SendMessage("GameObject", "OnResize", "");
-					}
-				}, 50);
-			}
-		}
-
-		// 监听所有全屏事件
-		document.addEventListener("fullscreenchange", handleFullscreenChange);
-		document.addEventListener(
-			"webkitfullscreenchange",
-			handleFullscreenChange
-		);
-		document.addEventListener("mozfullscreenchange", handleFullscreenChange);
-		document.addEventListener("msfullscreenchange", handleFullscreenChange);
-
-		// 页面可见性变化时重新计算尺寸
-		document.addEventListener("visibilitychange", () => {
-			if (!document.hidden) {
-				resizeCanvas();
-			}
-		});
-	</script>
-</body>
-
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Backgammon</title>
+    <style>
+      :root {
+        /* 更精致的背景配色 - 温暖的中性色调 */
+        --clr-bg: #fafbfc;
+        --clr-bg-gradient: linear-gradient(
+          135deg,
+          #ffffff 0%,
+          #f7fafc 20%,
+          #eef2f5 40%,
+          #e3e8ed 60%,
+          #f0f4f8 80%,
+          #fafbfc 100%
+        );
+        /* 添加细微的纹理背景 */
+        --clr-bg-pattern: radial-gradient(
+            circle at 20% 80%,
+            rgba(120, 119, 198, 0.05) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 20%,
+            rgba(59, 130, 246, 0.05) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 40% 40%,
+            rgba(35, 213, 171, 0.03) 0%,
+            transparent 50%
+          );
+        --clr-card: rgba(255, 255, 255, 0.95);
+        --clr-card-border: rgba(0, 0, 0, 0.06);
+        --clr-track: rgba(0, 0, 0, 0.08);
+        --clr-fill-start: #23d5ab;
+        --clr-fill-end: #3b82f6;
+        --clr-text: #1a202c;
+        --clr-text-secondary: #64748b;
+        --radius-lg: 20px;
+        --radius-sm: 12px;
+        --shadow-elev: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+
+        /* 安全区域 - 支持所有方向 */
+        --safe-area-inset-top: env(safe-area-inset-top, 0px);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-inset-left: env(safe-area-inset-left, 0px);
+        --safe-area-inset-right: env(safe-area-inset-right, 0px);
+        --status-bar-height: 52px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--clr-bg-gradient), var(--clr-bg-pattern);
+        background-attachment: fixed;
+        color: var(--clr-text);
+        font-family: var(--font-base);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        position: relative;
+      }
+
+      /* 添加一个微妙的动画背景效果 */
+      body::before {
+        content: "";
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(59, 130, 246, 0.04) 0%,
+          transparent 70%
+        );
+        animation: gentleFloat 20s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes gentleFloat {
+        0%,
+        100% {
+          transform: translate(0, 0) scale(1);
+        }
+        50% {
+          transform: translate(-30px, -30px) scale(1.1);
+        }
+      }
+
+      #game-wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        /* 默认考虑所有方向的安全区域 */
+        padding: var(--safe-area-inset-top) var(--safe-area-inset-right)
+          var(--safe-area-inset-bottom) var(--safe-area-inset-left);
+      }
+
+      #unity-container {
+        position: relative;
+        background: #ffffff;
+        box-shadow: var(--shadow-elev);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--clr-card-border);
+        overflow: visible !important;
+      }
+
+      #unity-canvas {
+        display: block;
+        width: 100%;
+        flex: 1;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        background: #000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      /* 状态栏默认隐藏 */
+      /* 状态栏默认隐藏 */
+      #status-bar {
+        width: 100%;
+        height: var(--status-bar-height);
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px) saturate(1.8);
+        border-top: 1px solid var(--clr-card-border);
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        z-index: 100;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        flex-shrink: 0;
+      }
+
+      #status-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      #status-logo {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      #status-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--clr-text);
+        letter-spacing: -0.01em;
+      }
+
+      #fullscreen-button {
+        width: 36px;
+        height: 36px;
+        background: rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      #fullscreen-button:hover {
+        background: rgba(0, 0, 0, 0.08);
+        border-color: rgba(0, 0, 0, 0.12);
+      }
+
+      #fullscreen-button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+
+      #fullscreen-button svg {
+        width: 18px;
+        height: 18px;
+        fill: var(--clr-text);
+        opacity: 0.8;
+      }
+
+      #fullscreen-button:hover svg {
+        opacity: 1;
+      }
+
+      /* 桌面端 - 默认显示状态栏 */
+      @media (min-width: 1024px) and (pointer: fine) {
+        #status-bar {
+          display: flex !important;
+        }
+
+        body.fullscreen #status-bar,
+        body.browser-fullscreen #status-bar {
+          display: none !important;
+        }
+
+        body:not(.fullscreen):not(.browser-fullscreen) #unity-container {
+          overflow: visible !important;
+          height: auto !important;
+        }
+      }
+
+      /* 全屏模式（包括 fullscreen 和 browser-fullscreen）- 无圆角，无边框，铺满屏幕 */
+      body.fullscreen #game-wrapper,
+      body.browser-fullscreen #game-wrapper {
+        padding: 0;
+      }
+
+      body.fullscreen #unity-container,
+      body.browser-fullscreen #unity-container {
+        width: 100% !important;
+        height: 100% !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+      }
+
+      body.fullscreen #unity-canvas,
+      body.browser-fullscreen #unity-canvas {
+        border-radius: 0 !important;
+      }
+
+      /* 移动端和平板 - 始终铺满，无状态栏，无圆角 */
+      @media (max-width: 1023px) {
+        #game-wrapper {
+          padding: 0;
+          padding: env(safe-area-inset-top) env(safe-area-inset-right)
+            env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        #unity-container {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          background: #000 !important; /* 确保背景是黑色 */
+        }
+
+        #unity-canvas {
+          border-radius: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
+
+        #status-bar {
+          display: none !important;
+        }
+
+        /* 移动端移除背景动画以提高性能 */
+        body::before {
+          display: none;
+        }
+      }
+
+      /* 加载器覆盖层 */
+      #loader-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(250, 251, 252, 0.98);
+        backdrop-filter: blur(20px);
+        z-index: 10;
+        border-radius: inherit;
+      }
+
+      #loader-card {
+        background: var(--clr-card);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--clr-card-border);
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        max-width: 90vw;
+        width: 380px;
+        align-items: center;
+      }
+
+      #loader-logo {
+        width: 120px;
+        height: auto;
+        object-fit: contain;
+        margin-bottom: 20px;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+      }
+
+      #progress-track {
+        position: relative;
+        width: 100%;
+        height: 24px;
+        background: var(--clr-track);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #progress-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          var(--clr-fill-start),
+          var(--clr-fill-end)
+        );
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 12px;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+      }
+
+      #progress-track .progress-label {
+        position: relative;
+        z-index: 1;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--clr-text);
+        pointer-events: none;
+      }
+
+      #bytes {
+        font-size: 13px;
+        color: var(--clr-text-secondary);
+        font-weight: 500;
+      }
+
+      /* 竖屏警告 */
+      #portrait-warning {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        font-size: 18px;
+        text-align: center;
+        padding: 40px;
+        z-index: 20;
+        border-radius: inherit;
+        color: var(--clr-text);
+      }
+
+      #portrait-warning.active {
+        display: flex;
+      }
+
+      /* 确保在横屏 iPad 上也能正确显示 */
+      @media (orientation: landscape) and (max-width: 1023px) {
+        #portrait-warning {
+          display: none !important;
+        }
+      }
+
+      /* 针对 iOS 设备的优化 */
+      @supports (padding: env(safe-area-inset-top)) {
+        /* 默认情况下，考虑安全区域 */
+        #game-wrapper {
+          padding: env(safe-area-inset-top) env(safe-area-inset-right)
+            env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* 桌面端全屏时移除安全区域 */
+        @media (min-width: 1024px) {
+          body.fullscreen #game-wrapper,
+          body.browser-fullscreen #game-wrapper {
+            padding: 0;
+          }
+        }
+
+        /* 移动端始终保持安全区域，避免内容被遮挡 */
+        @media (max-width: 1023px) {
+          #game-wrapper {
+            padding: env(safe-area-inset-top) env(safe-area-inset-right)
+              env(safe-area-inset-bottom) env(safe-area-inset-left);
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-wrapper">
+      <div id="unity-container">
+        <canvas id="unity-canvas" tabindex="1"></canvas>
+        <div id="status-bar">
+          <div id="status-left">
+            <img id="status-logo" src="TemplateData/logo.png" alt="logo" />
+            <div id="status-title">Backgammon</div>
+          </div>
+          <button id="fullscreen-button" title="Enter fullscreen">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
+              />
+            </svg>
+          </button>
+        </div>
+        <div id="loader-overlay">
+          <div id="loader-card">
+            <img id="loader-logo" src="TemplateData/logo.png" alt="logo" />
+            <div id="bytes">Loading...</div>
+            <div id="progress-track">
+              <div id="progress-fill"></div>
+              <div class="progress-label">0%</div>
+            </div>
+          </div>
+        </div>
+        <div id="portrait-warning">Please rotate your device to landscape</div>
+      </div>
+    </div>
+
+    <script src="loader.js"></script>
+    <script>
+      // Check URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldStartFullscreen = urlParams.get("fullscreen") === "true";
+      const shouldClearCache = urlParams.get("clear") === "true";
+
+      // Clear all possible caches and storage if requested
+      async function clearAllCaches() {
+        console.log("Starting cache cleanup...");
+
+        // Clear Service Workers
+        if ("serviceWorker" in navigator) {
+          const registrations =
+            await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+          console.log("Service Workers cleared");
+        }
+
+        // Clear Cache Storage
+        if ("caches" in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames.map((cacheName) => caches.delete(cacheName))
+          );
+          console.log("Cache Storage cleared");
+        }
+
+        // Clear IndexedDB
+        if (window.indexedDB && window.indexedDB.databases) {
+          try {
+            const databases = await indexedDB.databases();
+            databases.forEach((db) => {
+              indexedDB.deleteDatabase(db.name);
+            });
+            console.log("IndexedDB cleared");
+          } catch (e) {
+            console.log("IndexedDB clear failed:", e);
+          }
+        }
+
+        console.log("Cache cleanup complete");
+      }
+
+      // Run cleanup if requested via URL parameter
+      (async () => {
+        if (shouldClearCache) {
+          await clearAllCaches();
+          // Remove the clear parameter and reload
+          urlParams.delete("clear");
+          const newUrl =
+            window.location.pathname +
+            (urlParams.toString() ? "?" + urlParams.toString() : "");
+          window.location.replace(newUrl);
+        }
+      })();
+
+      const ASPECT = 16 / 9; // 改为更常见的 16:9 比例
+      const container = document.getElementById("unity-container");
+      const canvas = document.getElementById("unity-canvas");
+      const overlay = document.getElementById("loader-overlay");
+      const fillEl = document.getElementById("progress-fill");
+      const percentEl = document.querySelector(
+        "#progress-track .progress-label"
+      );
+      const bytesEl = document.getElementById("bytes");
+      const warnEl = document.getElementById("portrait-warning");
+      const fullscreenBtn = document.getElementById("fullscreen-button");
+
+      // Show loading message if clearing cache
+      if (shouldClearCache) {
+        bytesEl.textContent = "Clearing cache...";
+      }
+
+      /**
+       * 返回 'mobile' | 'tablet' | 'desktop'
+       */
+      function detectDeviceType() {
+        // 新一代 Client Hints 接口
+        const uaData = navigator.userAgentData;
+        if (uaData && typeof uaData.mobile === "boolean") {
+          // 有 mobile 字段，就用它直接判断
+          if (uaData.mobile) {
+            return "mobile";
+          }
+          // 不是 mobile，就可能是 tablet 或 desktop
+          // 再用屏幕尺寸简单区分一下
+          const w = screen.width;
+          return w >= 600 && w <= 1024 ? "tablet" : "desktop";
+        }
+
+        // 老浏览器降级：feature + UA + 媒体查询
+        const ua = navigator.userAgent;
+        const hasTouch =
+          navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+        const isCoarse = window.matchMedia("(pointer: coarse)").matches;
+        const isTabletUA = /\b(iPad|Tablet|PlayBook|Silk)\b/i.test(ua);
+        const isMobileUA = /\bAndroid.*Mobile|iPhone|Mobi\b/i.test(ua);
+
+        if (hasTouch && (isTabletUA || (isCoarse && !isMobileUA))) {
+          return "tablet";
+        }
+        if (hasTouch && (isMobileUA || isCoarse)) {
+          return "mobile";
+        }
+        return "desktop";
+      }
+
+      function isMobile() {
+        return detectDeviceType() === "mobile";
+      }
+
+      function isTablet() {
+        return detectDeviceType() === "tablet";
+      }
+
+      function isDesktop() {
+        return detectDeviceType() === "desktop";
+      }
+
+      function resizeCanvas() {
+        const wrapper = document.getElementById("game-wrapper");
+        const wrapperWidth = wrapper.clientWidth;
+        const wrapperHeight = wrapper.clientHeight;
+
+        // 移动端和平板，或者全屏模式 - 始终铺满
+        if (
+          isMobile() ||
+          isTablet() ||
+          document.body.classList.contains("fullscreen") ||
+          document.body.classList.contains("browser-fullscreen") ||
+          shouldStartFullscreen
+        ) {
+          container.style.width = "100%";
+          container.style.height = "100%";
+          return;
+        }
+
+        // 桌面端正常模式 - 保持比例
+        if (isDesktop()) {
+          const windowAspect = wrapperWidth / wrapperHeight;
+          let containerWidth, containerHeight;
+
+          if (windowAspect < ASPECT) {
+            // 窗口比游戏窄 - 适应宽度
+            containerWidth = Math.min(wrapperWidth * 0.9, 1400);
+            containerHeight = containerWidth / ASPECT;
+
+            // 确保不超过高度
+            if (containerHeight > wrapperHeight * 0.9) {
+              containerHeight = wrapperHeight * 0.9;
+              containerWidth = containerHeight * ASPECT;
+            }
+          } else {
+            // 窗口比游戏宽 - 适应高度
+            containerHeight = Math.min(wrapperHeight * 0.85, 900);
+            containerWidth = containerHeight * ASPECT;
+          }
+
+          container.style.width = containerWidth + "px";
+          container.style.height = containerHeight + "px";
+        }
+      }
+
+      function updateOrientation() {
+        // 只在真正的移动设备上显示竖屏警告
+        if (
+          isMobile() &&
+          window.matchMedia("(orientation: portrait)").matches
+        ) {
+          warnEl.classList.add("active");
+          // 竖屏时不调整大小，等待横屏
+          return;
+        } else {
+          warnEl.classList.remove("active");
+          // 延迟执行以确保旋转动画完成
+          setTimeout(() => {
+            resizeCanvas();
+            // 强制重新计算布局
+            container.style.display = "none";
+            container.offsetHeight; // 触发重排
+            container.style.display = "flex";
+
+            // 如果有 Unity 实例，通知它窗口大小改变
+            if (window.unityInstance) {
+              const rect = canvas.getBoundingClientRect();
+              console.log(
+                "Canvas size after rotation:",
+                rect.width,
+                rect.height
+              );
+            }
+          }, 100);
+        }
+      }
+
+      // 防抖函数
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      // 使用防抖处理 resize 事件
+      const debouncedResize = debounce(updateOrientation, 150);
+
+      // Event listeners
+      window.addEventListener("resize", debouncedResize);
+      window.addEventListener("orientationchange", () => {
+        // 立即隐藏/显示警告
+        if (
+          isMobile() &&
+          window.matchMedia("(orientation: portrait)").matches
+        ) {
+          warnEl.classList.add("active");
+        } else {
+          warnEl.classList.remove("active");
+        }
+        // 延迟处理布局更新
+        setTimeout(updateOrientation, 300);
+      });
+
+      // Initialize
+      updateOrientation();
+
+      // Check if should start in fullscreen
+      if (shouldStartFullscreen) {
+        document.body.classList.add("fullscreen");
+        resizeCanvas();
+      }
+
+      // Unity loader callback
+      function onProgress(fraction, loadedBytes, totalBytes) {
+        const capScale = 0.75;
+        const adjustedTotalBytes = totalBytes ? totalBytes * capScale : 0;
+
+        if (loadedBytes > adjustedTotalBytes) {
+          loadedBytes = adjustedTotalBytes;
+        }
+
+        let pct;
+        if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
+          pct = Math.round((loadedBytes / adjustedTotalBytes) * 100);
+        } else {
+          const adjustedFraction = Math.min(fraction / capScale, 1);
+          pct = Math.round(adjustedFraction * 100);
+        }
+
+        // 限制在 99% 以避免过早显示 100%
+        if (pct >= 100) {
+          pct = 99;
+        }
+
+        fillEl.style.width = pct + "%";
+        percentEl.textContent = pct + "%";
+
+        if (loadedBytes !== undefined && adjustedTotalBytes > 0) {
+          bytesEl.textContent =
+            (loadedBytes / 1048576).toFixed(1) +
+            " / " +
+            (adjustedTotalBytes / 1048576).toFixed(1) +
+            " MB";
+        } else {
+          bytesEl.textContent = "Loading...";
+        }
+      }
+
+      // Track fullscreen state
+      let wasBodyFullscreen = false;
+
+      // Start Unity
+      createUnityInstance(
+        canvas,
+        {
+          dataUrl: "Build/73b5b47c368ccacd64fef11301b9e06a.data.br",
+          frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
+          codeUrl: "Build/2225a68109dd7621e28bb923cf5a9908.wasm.br",
+          companyName: "ZeroPlay",
+          productName: "Backgammon",
+          productVersion: "6.4",
+          streamingAssetsUrl: "StreamingAssets",
+        },
+        onProgress
+      )
+        .then((unityInstance) => {
+          overlay.style.display = "none";
+          window.unityInstance = unityInstance;
+
+          // Fullscreen button click handler
+          fullscreenBtn.onclick = () => {
+            wasBodyFullscreen = document.body.classList.contains("fullscreen");
+            document.body.classList.add("browser-fullscreen");
+            unityInstance.SetFullscreen(1);
+          };
+
+          // 触发一次 resize 确保正确布局
+          setTimeout(() => {
+            resizeCanvas();
+            // 防止初始加载时 canvas 闪烁
+            canvas.style.opacity = "1";
+
+            // 移动设备上监听视口变化
+            if (isMobile() || isTablet()) {
+              let lastWidth = window.innerWidth;
+              let lastHeight = window.innerHeight;
+
+              setInterval(() => {
+                if (
+                  window.innerWidth !== lastWidth ||
+                  window.innerHeight !== lastHeight
+                ) {
+                  lastWidth = window.innerWidth;
+                  lastHeight = window.innerHeight;
+                  console.log("Viewport changed:", lastWidth, "x", lastHeight);
+                  resizeCanvas();
+                }
+              }, 500);
+            }
+          }, 100);
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Failed to load Unity: " + err.message);
+        });
+
+      // 处理全屏状态变化
+      function handleFullscreenChange() {
+        const isInFullscreen =
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement;
+
+        if (!isInFullscreen) {
+          document.body.classList.remove("browser-fullscreen");
+          if (wasBodyFullscreen) {
+            document.body.classList.add("fullscreen");
+          } else {
+            document.body.classList.remove("fullscreen");
+          }
+          // 延迟调整大小，确保状态栏渲染完成
+          setTimeout(() => {
+            resizeCanvas();
+            // 通知 Unity 调整视口
+            if (window.unityInstance) {
+              window.unityInstance.SendMessage("GameObject", "OnResize", "");
+            }
+          }, 50);
+        }
+      }
+
+      // 监听所有全屏事件
+      document.addEventListener("fullscreenchange", handleFullscreenChange);
+      document.addEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.addEventListener("msfullscreenchange", handleFullscreenChange);
+
+      // 页面可见性变化时重新计算尺寸
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          resizeCanvas();
+        }
+      });
+    </script>
+  </body>
 </html>
