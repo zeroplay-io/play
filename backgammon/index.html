@@ -52,8 +52,8 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: var(--safe-area-inset-top) var(--safe-area-inset-right)
-          var(--safe-area-inset-bottom) var(--safe-area-inset-left);
+        padding: var(--safe-area-inset-top) var(--safe-area-inset-right) 0
+          var(--safe-area-inset-left);
       }
 
       #unity-container {
@@ -209,13 +209,9 @@
 
       /* Mobile styles - with status bar */
       @media (max-width: 767px) {
-        #game-wrapper {
-          padding: var(--safe-area-inset-top) var(--safe-area-inset-right) 0
-            var(--safe-area-inset-left);
-        }
         #unity-container {
           width: 100% !important;
-          height: calc(100% - var(--safe-area-inset-bottom)) !important;
+          height: 100% !important;
           border-radius: 0 !important;
           border: none !important;
           box-shadow: none !important;
@@ -228,7 +224,6 @@
         }
         #status-bar {
           border-radius: 0 !important;
-          margin-bottom: var(--safe-area-inset-bottom);
         }
       }
 
@@ -610,12 +605,12 @@
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/7f4d087a565d33fe904687be555162d6.data.br",
+          dataUrl: "Build/e36a9ba7cc8b931b64fa15cadae21bf9.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/b10c5b5388f98157897e2cf6a415ad25.wasm.br",
+          codeUrl: "Build/88dc32b0c9d338bce4e439b78f7840df.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "5.5",
+          productVersion: "5.6",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
