@@ -145,6 +145,7 @@
       }
 
       /* 状态栏默认隐藏 */
+      /* 状态栏默认隐藏 */
       #status-bar {
         width: 100%;
         height: var(--status-bar-height);
@@ -217,10 +218,16 @@
         opacity: 1;
       }
 
-      /* 桌面端 - 非全屏时显示状态栏 */
+      /* 桌面端 - 默认显示状态栏 */
       @media (min-width: 1024px) and (pointer: fine) {
         #status-bar {
-          display: flex;
+          display: flex !important;
+        }
+
+        /* 全屏时隐藏状态栏 - 更高优先级 */
+        body.fullscreen #status-bar,
+        body.browser-fullscreen #status-bar {
+          display: none !important;
         }
       }
 
@@ -244,18 +251,12 @@
         border-radius: 0 !important;
       }
 
-      /* 全屏时隐藏状态栏 - 这个规则必须在媒体查询之后 */
-      @media (min-width: 1024px) and (pointer: fine) {
-        body.fullscreen #status-bar,
-        body.browser-fullscreen #status-bar {
-          display: none !important;
-        }
-      }
-
       /* 移动端和平板 - 始终铺满，无状态栏，无圆角 */
       @media (max-width: 1023px) {
         #game-wrapper {
           padding: 0;
+          padding: env(safe-area-inset-top) env(safe-area-inset-right)
+            env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
         #unity-container {
@@ -264,14 +265,22 @@
           border-radius: 0 !important;
           border: none !important;
           box-shadow: none !important;
+          background: #000 !important; /* 确保背景是黑色 */
         }
 
         #unity-canvas {
           border-radius: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
         }
 
         #status-bar {
           display: none !important;
+        }
+
+        /* 移动端移除背景动画以提高性能 */
+        body::before {
+          display: none;
         }
       }
 
@@ -385,15 +394,26 @@
 
       /* 针对 iOS 设备的优化 */
       @supports (padding: env(safe-area-inset-top)) {
+        /* 默认情况下，考虑安全区域 */
         #game-wrapper {
           padding: env(safe-area-inset-top) env(safe-area-inset-right)
             env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
-        /* iOS 全屏时移除安全区域 */
-        body.fullscreen #game-wrapper,
-        body.browser-fullscreen #game-wrapper {
-          padding: 0;
+        /* 桌面端全屏时移除安全区域 */
+        @media (min-width: 1024px) {
+          body.fullscreen #game-wrapper,
+          body.browser-fullscreen #game-wrapper {
+            padding: 0;
+          }
+        }
+
+        /* 移动端始终保持安全区域，避免内容被遮挡 */
+        @media (max-width: 1023px) {
+          #game-wrapper {
+            padding: env(safe-area-inset-top) env(safe-area-inset-right)
+              env(safe-area-inset-bottom) env(safe-area-inset-left);
+          }
         }
       }
     </style>
@@ -571,9 +591,28 @@
           window.matchMedia("(orientation: portrait)").matches
         ) {
           warnEl.classList.add("active");
+          // 竖屏时不调整大小，等待横屏
+          return;
         } else {
           warnEl.classList.remove("active");
-          resizeCanvas();
+          // 延迟执行以确保旋转动画完成
+          setTimeout(() => {
+            resizeCanvas();
+            // 强制重新计算布局
+            container.style.display = "none";
+            container.offsetHeight; // 触发重排
+            container.style.display = "flex";
+
+            // 如果有 Unity 实例，通知它窗口大小改变
+            if (window.unityInstance) {
+              const rect = canvas.getBoundingClientRect();
+              console.log(
+                "Canvas size after rotation:",
+                rect.width,
+                rect.height
+              );
+            }
+          }, 100);
         }
       }
 
@@ -591,11 +630,23 @@
       }
 
       // 使用防抖处理 resize 事件
-      const debouncedResize = debounce(updateOrientation, 100);
+      const debouncedResize = debounce(updateOrientation, 150);
 
       // Event listeners
       window.addEventListener("resize", debouncedResize);
-      window.addEventListener("orientationchange", updateOrientation);
+      window.addEventListener("orientationchange", () => {
+        // 立即隐藏/显示警告
+        if (
+          isMobile() &&
+          window.matchMedia("(orientation: portrait)").matches
+        ) {
+          warnEl.classList.add("active");
+        } else {
+          warnEl.classList.remove("active");
+        }
+        // 延迟处理布局更新
+        setTimeout(updateOrientation, 300);
+      });
 
       // Initialize
       updateOrientation();
@@ -649,12 +700,12 @@
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/734094759dc1045da2cd2dded8048141.data.br",
+          dataUrl: "Build/5cc95cd3874645828a794725311459ad.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/30fc1399d0679386397e8b4649fab688.wasm.br",
+          codeUrl: "Build/b83d4031e4ccdb45091c4949ad75828f.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "6.1",
+          productVersion: "6.2",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
@@ -675,6 +726,24 @@
             resizeCanvas();
             // 防止初始加载时 canvas 闪烁
             canvas.style.opacity = "1";
+
+            // 移动设备上监听视口变化
+            if (isMobile() || isTablet()) {
+              let lastWidth = window.innerWidth;
+              let lastHeight = window.innerHeight;
+
+              setInterval(() => {
+                if (
+                  window.innerWidth !== lastWidth ||
+                  window.innerHeight !== lastHeight
+                ) {
+                  lastWidth = window.innerWidth;
+                  lastHeight = window.innerHeight;
+                  console.log("Viewport changed:", lastWidth, "x", lastHeight);
+                  resizeCanvas();
+                }
+              }, 500);
+            }
           }, 100);
         })
         .catch((err) => {
