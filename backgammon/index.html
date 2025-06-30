@@ -604,8 +604,8 @@
 				}
 				containerWidth = Math.floor(containerWidth);
 				containerHeight = Math.floor(containerHeight);
-				container.style.width = containerWidth + "px";
-				container.style.height = containerHeight + "px";
+				container.style.setProperty("width", containerWidth + "px", "important");
+				container.style.setProperty("height", containerHeight + "px", "important");
 				console.log("Resizing container to ", containerWidth, "x", containerHeight);
 			}
 		}
