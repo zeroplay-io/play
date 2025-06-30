@@ -49,7 +49,14 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #1a1a1f;
+        background: linear-gradient(
+          135deg,
+          #2d3748 0%,
+          #4a5568 25%,
+          #2d3748 50%,
+          #1a202c 75%,
+          #2d3748 100%
+        );
         color: #fff;
         font-family: var(--font-base);
       }
@@ -60,8 +67,8 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: var(--safe-area-inset-top) var(--safe-area-inset-right) 0
-          var(--safe-area-inset-left);
+        padding: var(--safe-area-inset-top) var(--safe-area-inset-right)
+          var(--safe-area-inset-bottom) var(--safe-area-inset-left);
       }
 
       #unity-container {
@@ -77,8 +84,17 @@
         flex-direction: column;
       }
 
-      /* Device frame effect on desktop */
+      /* Desktop - show status bar when not in browser fullscreen, no bottom safe area */
       @media (min-width: 1024px) and (pointer: fine) {
+        #game-wrapper {
+          padding: var(--safe-area-inset-top) var(--safe-area-inset-right) 0
+            var(--safe-area-inset-left);
+        }
+
+        #status-bar {
+          display: flex;
+        }
+
         body:not(.fullscreen) #unity-container {
           border: 3px solid #1a1a1d;
           box-shadow: 0 0 40px rgba(0, 0, 0, 0.8),
@@ -117,7 +133,7 @@
         flex: 1;
       }
 
-      /* Status bar */
+      /* Show status bar on all devices except browser fullscreen */
       #status-bar {
         width: 100%;
         height: var(--status-bar-height);
@@ -129,7 +145,7 @@
         );
         backdrop-filter: blur(16px) saturate(1.2);
         border-top: 1px solid rgba(255, 255, 255, 0.12);
-        display: flex;
+        display: none;
         align-items: center;
         justify-content: space-between;
         padding: 0 16px;
@@ -246,7 +262,7 @@
         display: none !important;
       }
 
-      /* Mobile styles - with status bar, ensure status bar is visible */
+      /* Mobile styles - no status bar, no rounded corners */
       @media (max-width: 767px) {
         #unity-container {
           width: 100% !important;
@@ -262,16 +278,12 @@
           border-radius: 0 !important;
         }
         #status-bar {
-          border-radius: 0 !important;
-          display: flex !important;
+          display: none !important;
         }
       }
 
-      /* Tablet styles - with status bar, fix bottom clipping */
+      /* Tablet styles - no status bar, no rounded corners */
       @media (min-width: 768px) and (max-width: 1023px) {
-        #game-wrapper {
-          height: 100vh;
-        }
         #unity-container {
           width: 100% !important;
           height: 100% !important;
@@ -286,8 +298,7 @@
           border-radius: 0 !important;
         }
         #status-bar {
-          border-radius: 0 !important;
-          display: flex !important;
+          display: none !important;
         }
       }
 
@@ -532,15 +543,15 @@
       }
 
       function isMobile() {
-        return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        return window.innerWidth <= 767;
       }
 
       function isTablet() {
-        const ua = navigator.userAgent;
-        return (
-          /iPad|Android(?!.*Mobile)/i.test(ua) ||
-          (window.innerWidth >= 768 && window.innerWidth <= 1023)
-        );
+        return window.innerWidth >= 768 && window.innerWidth <= 1023;
+      }
+
+      function isDesktop() {
+        return window.innerWidth >= 1024;
       }
 
       function resizeCanvas() {
@@ -555,10 +566,11 @@
           return;
         }
 
-        // Desktop - check if fullscreen or URL parameter
+        // Desktop only - check if fullscreen or URL parameter
         if (
-          document.body.classList.contains("fullscreen") ||
-          shouldStartFullscreen
+          isDesktop() &&
+          (document.body.classList.contains("fullscreen") ||
+            shouldStartFullscreen)
         ) {
           container.style.width = "100%";
           container.style.height = "100%";
@@ -566,21 +578,23 @@
         }
 
         // Desktop normal mode - maintain aspect ratio
-        const windowAspect = wrapperWidth / wrapperHeight;
-        let containerWidth, containerHeight;
+        if (isDesktop()) {
+          const windowAspect = wrapperWidth / wrapperHeight;
+          let containerWidth, containerHeight;
 
-        if (windowAspect < ASPECT) {
-          // Window is narrower than game aspect - fit to width
-          containerWidth = Math.min(wrapperWidth * 0.95, 1200); // Max width 1200px
-          containerHeight = containerWidth / ASPECT;
-        } else {
-          // Window is wider than game aspect - fit to height
-          containerHeight = Math.min(wrapperHeight * 0.9, 800); // Max height 800px
-          containerWidth = containerHeight * ASPECT;
+          if (windowAspect < ASPECT) {
+            // Window is narrower than game aspect - fit to width
+            containerWidth = Math.min(wrapperWidth * 0.95, 1200); // Max width 1200px
+            containerHeight = containerWidth / ASPECT;
+          } else {
+            // Window is wider than game aspect - fit to height
+            containerHeight = Math.min(wrapperHeight * 0.9, 800); // Max height 800px
+            containerWidth = containerHeight * ASPECT;
+          }
+
+          container.style.width = containerWidth + "px";
+          container.style.height = containerHeight + "px";
         }
-
-        container.style.width = containerWidth + "px";
-        container.style.height = containerHeight + "px";
       }
 
       function updateOrientation() {
@@ -603,7 +617,7 @@
       updateOrientation();
 
       // Check if should start in fullscreen
-      if (shouldStartFullscreen && !isMobile() && !isTablet()) {
+      if (shouldStartFullscreen && isDesktop()) {
         document.body.classList.add("fullscreen");
       }
 
@@ -657,12 +671,12 @@
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/43dc743c71b5f4bbb2e1a92fe09b6704.data.br",
+          dataUrl: "Build/cba603b0b92ecd1e69ccc4ad4cc20775.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/16be0c06bf3577697e092aaf2bf941fb.wasm.br",
+          codeUrl: "Build/471a3ed07d02a6b97d6b842a59a49007.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "5.7",
+          productVersion: "5.8",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
