@@ -210,11 +210,15 @@
 			#status-bar {
 				display: flex !important;
 			}
-		}
 
-		:fullscreen #status-bar,
-		:-webkit-full-screen #status-bar {
-			display: none !important;
+			body.fullscreen #status-bar,
+			body.browser-fullscreen #status-bar {
+				display: none !important;
+			}
+
+			body:not(.fullscreen):not(.browser-fullscreen) #status-bar {
+				display: flex !important;
+			}
 		}
 
 		/* 全屏模式（包括 fullscreen 和 browser-fullscreen）- 无圆角，无边框，铺满屏幕 */
