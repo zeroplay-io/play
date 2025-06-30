@@ -216,9 +216,9 @@
 				display: none !important;
 			}
 
-			#unity-canvas:fullscreen~#status-bar,
-			#unity-canvas:-webkit-full-screen~#status-bar {
-				display: none !important;
+			body:not(.fullscreen):not(.browser-fullscreen) #unity-container {
+				overflow: visible !important;
+				height: auto !important;
 			}
 		}
 
