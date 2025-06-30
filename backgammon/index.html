@@ -602,9 +602,11 @@
 					containerHeight = Math.min(wrapperHeight * 0.85, 900);
 					containerWidth = containerHeight * ASPECT;
 				}
-
+				containerWidth = Math.floor(containerWidth);
+				containerHeight = Math.floor(containerHeight);
 				container.style.width = containerWidth + "px";
 				container.style.height = containerHeight + "px";
+				console.log("Resizing container to ", containerWidth, "x", containerHeight);
 			}
 		}
 
