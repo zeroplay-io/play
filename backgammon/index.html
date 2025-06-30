@@ -16,6 +16,14 @@
     <style>
       :root {
         --clr-bg: #0e0e11;
+        --clr-bg-gradient: linear-gradient(
+          135deg,
+          #0a0a0d 0%,
+          #151518 25%,
+          #0e0e11 50%,
+          #1a1a1d 75%,
+          #0f0f12 100%
+        );
         --clr-card: rgba(255, 255, 255, 0.05);
         --clr-track: rgba(255, 255, 255, 0.15);
         --clr-fill-start: #23d5ab;
@@ -41,7 +49,7 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: var(--clr-bg);
+        background: #1a1a1f;
         color: #fff;
         font-family: var(--font-base);
       }
@@ -58,9 +66,9 @@
 
       #unity-container {
         position: relative;
-        background: #000;
+        background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.8),
-          0 0 80px rgba(35, 213, 171, 0.2),
+          0 0 80px rgba(35, 213, 171, 0.2), 0 0 120px rgba(59, 130, 246, 0.1),
           inset 0 0 0 1px rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         overflow: hidden;
@@ -94,8 +102,10 @@
         body:not(.fullscreen) #unity-container:hover {
           box-shadow: 0 0 50px rgba(0, 0, 0, 0.9),
             0 0 100px rgba(35, 213, 171, 0.3),
+            0 0 140px rgba(59, 130, 246, 0.15),
             inset 0 0 0 1px rgba(255, 255, 255, 0.15),
             inset 0 2px 4px rgba(255, 255, 255, 0.08);
+          transform: translateY(-2px);
         }
       }
 
@@ -114,18 +124,39 @@
         background: linear-gradient(
           135deg,
           rgba(14, 14, 17, 0.95),
-          rgba(26, 26, 29, 0.95)
+          rgba(26, 26, 29, 0.95),
+          rgba(18, 18, 22, 0.95)
         );
-        backdrop-filter: blur(12px);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(16px) saturate(1.2);
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 0 16px;
         z-index: 100;
         border-radius: 0 0 9px 9px;
-        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3),
+          0 -1px 0 rgba(35, 213, 171, 0.1);
         flex-shrink: 0;
+        position: relative;
+      }
+
+      #status-bar::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(35, 213, 171, 0.05) 50%,
+          transparent 100%
+        );
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      #status-bar:hover::before {
+        opacity: 1;
       }
 
       #status-left {
@@ -138,7 +169,15 @@
         width: 24px;
         height: 24px;
         border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(35, 213, 171, 0.3);
+        box-shadow: 0 2px 8px rgba(35, 213, 171, 0.4),
+          0 0 12px rgba(35, 213, 171, 0.2);
+        transition: all 0.3s ease;
+      }
+
+      #status-logo:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(35, 213, 171, 0.5),
+          0 0 16px rgba(35, 213, 171, 0.3);
       }
 
       #status-title {
@@ -207,7 +246,7 @@
         display: none !important;
       }
 
-      /* Mobile styles - with status bar */
+      /* Mobile styles - with status bar, ensure status bar is visible */
       @media (max-width: 767px) {
         #unity-container {
           width: 100% !important;
@@ -224,11 +263,15 @@
         }
         #status-bar {
           border-radius: 0 !important;
+          display: flex !important;
         }
       }
 
-      /* Tablet styles - with status bar */
+      /* Tablet styles - with status bar, fix bottom clipping */
       @media (min-width: 768px) and (max-width: 1023px) {
+        #game-wrapper {
+          height: 100vh;
+        }
         #unity-container {
           width: 100% !important;
           height: 100% !important;
@@ -244,6 +287,7 @@
         }
         #status-bar {
           border-radius: 0 !important;
+          display: flex !important;
         }
       }
 
@@ -340,7 +384,7 @@
         display: flex;
       }
 
-      /* Custom fullscreen mode (not browser fullscreen) */
+      /* Custom fullscreen mode (not browser fullscreen) - no rounded corners */
       body.fullscreen #game-wrapper {
         padding: 0;
       }
@@ -348,25 +392,33 @@
       body.fullscreen #unity-container {
         width: 100% !important;
         height: 100% !important;
-        box-shadow: none;
-        border-radius: 0;
-        border: none;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        border: none !important;
       }
 
       body.fullscreen #unity-container::before {
-        display: none;
+        display: none !important;
       }
 
       body.fullscreen #unity-canvas {
-        border-radius: 0 0 0 0;
+        border-radius: 0 !important;
       }
 
       body.fullscreen #status-bar {
-        border-radius: 0;
+        border-radius: 0 !important;
       }
 
-      /* Browser fullscreen mode - hide status bar completely */
+      /* Browser fullscreen mode - hide status bar completely and no rounded corners */
+      body.browser-fullscreen #status-bar {
+        display: none !important;
+      }
+
       body.browser-fullscreen #unity-canvas {
+        border-radius: 0 !important;
+      }
+
+      body.browser-fullscreen #unity-container {
         border-radius: 0 !important;
       }
     </style>
@@ -598,19 +650,19 @@
         }
       }
 
-      // 记录进入浏览器全屏前的状态
+      // Track fullscreen state before entering browser fullscreen
       let wasBodyFullscreen = false;
 
       // Start Unity
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/e36a9ba7cc8b931b64fa15cadae21bf9.data.br",
+          dataUrl: "Build/43dc743c71b5f4bbb2e1a92fe09b6704.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/88dc32b0c9d338bce4e439b78f7840df.wasm.br",
+          codeUrl: "Build/16be0c06bf3577697e092aaf2bf941fb.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "5.6",
+          productVersion: "5.7",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
@@ -618,14 +670,14 @@
         .then((unityInstance) => {
           overlay.style.display = "none";
 
-          // 保存unity实例到全局变量
+          // Save unity instance to global variable
           window.unityInstance = unityInstance;
 
-          // 全屏按钮点击处理
+          // Fullscreen button click handler
           fullscreenBtn.onclick = () => {
-            // 记录当前body是否有fullscreen类
+            // Record current body fullscreen state
             wasBodyFullscreen = document.body.classList.contains("fullscreen");
-            // 添加浏览器全屏类
+            // Add browser fullscreen class
             document.body.classList.add("browser-fullscreen");
             unityInstance.SetFullscreen(1);
           };
@@ -635,12 +687,12 @@
           alert("Failed to load Unity: " + err.message);
         });
 
-      // 监听退出浏览器全屏
+      // Listen for exiting browser fullscreen
       document.addEventListener("fullscreenchange", () => {
         if (!document.fullscreenElement) {
-          // 移除浏览器全屏类
+          // Remove browser fullscreen class
           document.body.classList.remove("browser-fullscreen");
-          // 恢复进入前的状态
+          // Restore previous state
           if (wasBodyFullscreen) {
             document.body.classList.add("fullscreen");
           } else {
@@ -650,7 +702,7 @@
         }
       });
 
-      // 兼容其他浏览器
+      // Compatibility for other browsers
       document.addEventListener("webkitfullscreenchange", () => {
         if (!document.webkitFullscreenElement) {
           document.body.classList.remove("browser-fullscreen");
