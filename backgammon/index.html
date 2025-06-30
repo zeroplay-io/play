@@ -216,8 +216,9 @@
 				display: none !important;
 			}
 
-			body:not(.fullscreen):not(.browser-fullscreen) #status-bar {
-				display: flex !important;
+			#unity-canvas:fullscreen~#status-bar,
+			#unity-canvas:-webkit-full-screen~#status-bar {
+				display: none !important;
 			}
 		}
 
