@@ -90,9 +90,8 @@
       #unity-canvas {
         display: block;
         width: 100%;
-        height: 100%;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
         flex: 1;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
         background: #000;
       }
 
@@ -610,12 +609,12 @@
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/e9f5392ea3815a41ebdd5613ed9f1c7d.data.br",
+          dataUrl: "Build/49f10e034aa97571f6699e9b87376586.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/f816164f51f114026d14f699e7fccbb1.wasm.br",
+          codeUrl: "Build/6f4fc47b1b6b002c83cd139407660dac.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon",
-          productVersion: "5.9",
+          productVersion: "6.0",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
@@ -654,7 +653,14 @@
           } else {
             document.body.classList.remove("fullscreen");
           }
-          resizeCanvas();
+          // 延迟调整大小，确保状态栏渲染完成
+          setTimeout(() => {
+            resizeCanvas();
+            // 通知 Unity 调整视口
+            if (window.unityInstance) {
+              window.unityInstance.SendMessage("GameObject", "OnResize", "");
+            }
+          }, 50);
         }
       }
 
