@@ -146,7 +146,6 @@
       }
 
       /* 状态栏默认隐藏 */
-      /* 状态栏默认隐藏 */
       #status-bar {
         width: 100%;
         height: var(--status-bar-height);
@@ -236,14 +235,12 @@
         }
       }
 
-      /* 全屏模式（包括 fullscreen 和 browser-fullscreen）- 无圆角，无边框，铺满屏幕 */
-      body.fullscreen #game-wrapper,
-      body.browser-fullscreen #game-wrapper {
+      /* 铺满模式样式 - 适用于所有设备的全屏/铺满状态 */
+      body.full-coverage #game-wrapper {
         padding: 0;
       }
 
-      body.fullscreen #unity-container,
-      body.browser-fullscreen #unity-container {
+      body.full-coverage #unity-container {
         width: 100% !important;
         height: 100% !important;
         box-shadow: none !important;
@@ -251,15 +248,23 @@
         border: none !important;
       }
 
-      body.fullscreen #unity-canvas,
-      body.browser-fullscreen #unity-canvas {
+      body.full-coverage #unity-canvas {
+        border-radius: 0 !important;
+      }
+
+      body.full-coverage #status-bar {
         border-radius: 0 !important;
       }
 
       /* 移动端和平板 - 始终铺满，无状态栏，无圆角 */
       @media (max-width: 1023px) {
+        body::before {
+          display: none; /* 移动端移除背景动画以提高性能 */
+        }
+
         #game-wrapper {
           padding: 0;
+          /* 移动端使用安全区域内边距 */
           padding: env(safe-area-inset-top) env(safe-area-inset-right)
             env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
@@ -270,7 +275,6 @@
           border-radius: 0 !important;
           border: none !important;
           box-shadow: none !important;
-          background: #000 !important; /* 确保背景是黑色 */
         }
 
         #unity-canvas {
@@ -281,11 +285,6 @@
 
         #status-bar {
           display: none !important;
-        }
-
-        /* 移动端移除背景动画以提高性能 */
-        body::before {
-          display: none;
         }
       }
 
@@ -400,16 +399,9 @@
 
       /* 针对 iOS 设备的优化 */
       @supports (padding: env(safe-area-inset-top)) {
-        /* 默认情况下，考虑安全区域 */
-        #game-wrapper {
-          padding: env(safe-area-inset-top) env(safe-area-inset-right)
-            env(safe-area-inset-bottom) env(safe-area-inset-left);
-        }
-
         /* 桌面端全屏时移除安全区域 */
         @media (min-width: 1024px) {
-          body.fullscreen #game-wrapper,
-          body.browser-fullscreen #game-wrapper {
+          body.full-coverage #game-wrapper {
             padding: 0;
           }
         }
@@ -514,7 +506,7 @@
         }
       })();
 
-      const ASPECT = 16 / 9; // 改为更常见的 16:9 比例
+      const ASPECT = 16 / 9;
       const container = document.getElementById("unity-container");
       const canvas = document.getElementById("unity-canvas");
       const overlay = document.getElementById("loader-overlay");
@@ -525,6 +517,9 @@
       const bytesEl = document.getElementById("bytes");
       const warnEl = document.getElementById("portrait-warning");
       const fullscreenBtn = document.getElementById("fullscreen-button");
+
+      // 记录桌面端是否处于自定义全屏状态（通过fullscreen参数或手动设置）
+      let isCustomFullscreen = shouldStartFullscreen;
 
       // Show loading message if clearing cache
       if (shouldClearCache) {
@@ -577,25 +572,38 @@
         return detectDeviceType() === "desktop";
       }
 
+      function isFullCoverage() {
+        return (
+          isMobile() ||
+          isTablet() ||
+          isCustomFullscreen ||
+          document.body.classList.contains("browser-fullscreen")
+        );
+      }
+
+      function updateFullCoverageClass() {
+        if (isFullCoverage()) {
+          document.body.classList.add("full-coverage");
+        } else {
+          document.body.classList.remove("full-coverage");
+        }
+      }
+
       function resizeCanvas() {
+        updateFullCoverageClass();
+
         const wrapper = document.getElementById("game-wrapper");
         const wrapperWidth = wrapper.clientWidth;
         const wrapperHeight = wrapper.clientHeight;
 
-        // 移动端和平板，或者全屏模式 - 始终铺满
-        if (
-          isMobile() ||
-          isTablet() ||
-          document.body.classList.contains("fullscreen") ||
-          document.body.classList.contains("browser-fullscreen") ||
-          shouldStartFullscreen
-        ) {
+        // 铺满模式 - 所有设备的全屏状态
+        if (isFullCoverage()) {
           container.style.width = "100%";
           container.style.height = "100%";
           return;
         }
 
-        // 桌面端正常模式 - 保持比例
+        // 桌面端正常模式 - 根据窗口大小重新计算合适的尺寸
         if (isDesktop()) {
           const windowAspect = wrapperWidth / wrapperHeight;
           let containerWidth, containerHeight;
@@ -690,7 +698,8 @@
 
       // Check if should start in fullscreen
       if (shouldStartFullscreen) {
-        document.body.classList.add("fullscreen");
+        isCustomFullscreen = true;
+        updateFullCoverageClass();
         resizeCanvas();
       }
 
@@ -730,19 +739,19 @@
         }
       }
 
-      // Track fullscreen state
-      let wasBodyFullscreen = false;
+      // Track custom fullscreen state (not browser native fullscreen)
+      let isCustomFullscreen = shouldStartFullscreen;
 
       // Start Unity
       createUnityInstance(
         canvas,
         {
-          dataUrl: "Build/f4044292ae0a231f760597b66f9019a9.data.br",
+          dataUrl: "Build/67b63aa88bb6b3e1bf991d8a5df48872.data.br",
           frameworkUrl: "Build/75a5de9c3908e7a1efe3e74bad1de540.framework.js.br",
-          codeUrl: "Build/dab22d9c9b024607e0cbbe3d7bab4111.wasm.br",
+          codeUrl: "Build/c262ee408cf545368352353575f0ba88.wasm.br",
           companyName: "ZeroPlay",
           productName: "Backgammon GO: Fair Dice",
-          productVersion: "6.5",
+          productVersion: "6.6",
           streamingAssetsUrl: "StreamingAssets",
         },
         onProgress
@@ -753,8 +762,8 @@
 
           // Fullscreen button click handler
           fullscreenBtn.onclick = () => {
-            wasBodyFullscreen = document.body.classList.contains("fullscreen");
             document.body.classList.add("browser-fullscreen");
+            updateFullCoverageClass();
             unityInstance.SetFullscreen(1);
           };
 
@@ -798,11 +807,8 @@
 
         if (!isInFullscreen) {
           document.body.classList.remove("browser-fullscreen");
-          if (wasBodyFullscreen) {
-            document.body.classList.add("fullscreen");
-          } else {
-            document.body.classList.remove("fullscreen");
-          }
+          // 更新 full-coverage 类并调整大小
+          updateFullCoverageClass();
           // 延迟调整大小，确保状态栏渲染完成
           setTimeout(() => {
             resizeCanvas();
